@@ -9,11 +9,8 @@ local function SYS_INITGLOBAL()
 end
 SYS_INITGLOBAL()
 
-
 TUNING.TIMESTOPPER_PERFORMANCE_MODE = GetModConfigData("performance_mode")
 TUNING.TIMESTOPPER_INVINCIBLE_FOE = GetModConfigData("invincible_foe")
--- TUNING.TIMESTOPPER_GLOBAL_GREY_EFFECT = GetModConfigData("global_grey_effect")
-
 
 AddComponentPostInit("projectile", function(self)	-- <改写投射物等API以达到时停效果
 	self.theworldstate = nil
@@ -76,50 +73,72 @@ AddComponentPostInit("projectile", function(self)	-- <改写投射物等API以�
 end)
 
 AddComponentPostInit("burnable", function(self)	-- <改写燃烧API
-	self.countdown = nil
-	local function DoneBurning(inst, self)
-        local isplant = inst:HasTag("plant") and not (inst.components.diseaseable ~= nil and inst.components.diseaseable:IsDiseased())
-        local pos = isplant and inst:GetPosition() or nil
+	-- self.countdown = nil
+	-- local function DoneBurning(inst, self)
+    --     local isplant = inst:HasTag("plant") and not (inst.components.diseaseable ~= nil and inst.components.diseaseable:IsDiseased())
+    --     local pos = isplant and inst:GetPosition() or nil
     
-        inst:PushEvent("onburnt")
+    --     inst:PushEvent("onburnt")
 
-		if self.onburnt ~= nil then
-			self.onburnt(inst)
-		end
+	-- 	if self.onburnt ~= nil then
+	-- 		self.onburnt(inst)
+	-- 	end
 
-        if self.inst:IsValid() then
-            if inst.components.explosive ~= nil then
-                --explosive explode
-                inst.components.explosive:OnBurnt()
-            end
+    --     if self.inst:IsValid() then
+    --         if inst.components.explosive ~= nil then
+    --             --explosive explode
+    --             inst.components.explosive:OnBurnt()
+    --         end
 
-            if self.extinguishimmediately then
-                self:Extinguish()
-            end
-        end
+    --         if self.extinguishimmediately then
+    --             self:Extinguish()
+    --         end
+    --     end
 
-        if isplant then
-            TheWorld:PushEvent("plantkilled", { pos = pos }) --this event is pushed in other places too
-        end    
-	end
-	local function vtick(inst, self)
-		if inst.components.explosive ~= nil and self.countdown > 0.1 or not inst:HasTag("time_stopped") then
-			self.countdown = self.countdown - 0.1
-			if self.countdown <= 0 then
-				self.task:Cancel()
-				self.task = nil
-				self.countdown = nil
-				DoneBurning(inst, self)
-			end
-		end
-	end
+    --     if isplant then
+    --         TheWorld:PushEvent("plantkilled", { pos = pos }) --this event is pushed in other places too
+    --     end    
+	-- end
+	-- local function vtick(inst, self)
+	-- 	if inst.components.explosive ~= nil and self.countdown > 0.1 or not inst:HasTag("time_stopped") then
+	-- 		self.countdown = self.countdown - 0.1
+	-- 		if self.countdown <= 0 then
+	-- 			self.task:Cancel()
+	-- 			self.task = nil
+	-- 			self.countdown = nil
+	-- 			DoneBurning(inst, self)
+	-- 		end
+	-- 	end
+	-- end
+	local pExtendBurning = self.ExtendBurning
 	self.ExtendBurning = function(self)
-		if self.task ~= nil then
-			self.task:Cancel()
+		if not self.twevent then 
+			self.twevent = self.inst:ListenForEvent("time_stopped", function()
+				if self.task then 
+					self.taskfn = self.task.fn
+					self.taskremaining = self.task:NextTime()
+					if self.taskfn and self.taskremaining then 
+						self.task:Cancel()
+						self.task = nil
+					end
+				end
+			end)
 		end
-		self.countdown = self.burntime
-		self.task = self.burntime ~= nil and self.inst:DoPeriodicTask(0.1, vtick, nil, self) or nil
+		if not self.twevent2 then 
+			self.twevent2 = self.inst:ListenForEvent("time_resumed", function()
+				if not self.task and self.taskfn and self.taskremaining then 
+					self.task = self.inst:DoTaskInTime(self.taskremaining, self.taskfn, self)
+				end
+			end)
+		end
+		return pExtendBurning(self)
+		-- if self.task ~= nil then
+		-- 	self.task:Cancel()
+		-- end
+		-- self.countdown = self.burntime
+		-- self.task = self.burntime ~= nil and self.inst:DoPeriodicTask(0.1, vtick, nil, self) or nil
 	end    
+	
 end)
 
 AddComponentPostInit("childspawner", function(self)	-- <改写巢穴类API
@@ -219,8 +238,6 @@ AddComponentPostInit("health", function(self)	-- <改写生命API
 end)	-- >
 
 AddPrefabPostInit("world", function(inst)
-	-- inst.time_stopped = net_bool(inst.GUID, "stopped", "the_world")
-    -- inst:AddComponent("timestopper_world")
     if not inst.components.timer then
         inst:AddComponent("timer")
     end
@@ -247,13 +264,6 @@ AddPlayerPostInit(function(inst)
     if not inst.components.timer then
         inst:AddComponent("timer")
     end
-	-- if ThePlayer then
-	-- 	ThePlayer:ListenForEvent("instoppedtime", function(inst1)
-	-- 		print(inst)
-	-- 		print(inst1)
-	-- 		print(0)
-	-- 	end)
-	-- end
 	inst.instoppedtime = net_bool(inst.GUID, "stopped", "instoppedtime")
     inst:DoTaskInTime(0, function()
         inst:ListenForEvent("timerdone", function(inst, data)
@@ -266,12 +276,14 @@ AddPlayerPostInit(function(inst)
     end)
 end)
 
-AddPrefabPostInit("raindrop", function(inst)
-	if ThePlayer and ThePlayer.instoppedtime:value() then
-	-- if ThePlayer and (ThePlayer:HasTag("time_stopped") or ThePlayer:HasTag("canmoveintime")) then
-		inst:Hide()
-	end
-end)
+local fxp = {"raindrop","wave_shimmer","wave_shimmer_med", "wave_shimmer_deep","wave_shimmer_flood","wave_shore","impact","shatter"}
+for _,v in pairs(fxp) do 
+	AddPrefabPostInit(v, function(inst)
+		if ThePlayer and ThePlayer.instoppedtime:value() then
+			inst:Hide()
+		end
+	end)
+end
 
 local Precipitation = {rain = 0.2, caverain = 0.2, pollen = .0001, snow = 0.8}
 for k, v in pairs(Precipitation)do
@@ -282,25 +294,8 @@ for k, v in pairs(Precipitation)do
 		local function vfxon(inst)
 			inst.VFXEffect:SetDragCoefficient(0,v)
 		end
-		-- if ThePlayer then
-		-- 	if ThePlayer.instoppedtime:value() then
-		-- -- if ThePlayer and (ThePlayer:HasTag("time_stopped") or ThePlayer:HasTag("canmoveintime")) then
-		-- 		vfxoff(inst)
-		-- 	end
-		-- 	ThePlayer:ListenForEvent("instoppedtime", function(inst1)
-		-- 		print(inst)
-		-- 		print(inst1)
-		-- 		print(1)
-		-- 		-- if inst.instoppedtime:value() then
-		-- 		-- 	vfxoff()
-		-- 		-- else
-		-- 		-- 	vfxon()
-		-- 		-- end
-		-- 	end)
-		-- end
 		inst:DoPeriodicTask(0.1, function(inst)
 			if ThePlayer and ThePlayer.instoppedtime:value() then
-			-- if ThePlayer and (ThePlayer:HasTag("time_stopped") or ThePlayer:HasTag("canmoveintime")) then
 				vfxoff(inst)
 			else
 				vfxon(inst)
@@ -308,111 +303,3 @@ for k, v in pairs(Precipitation)do
 		end)
 	end)
 end
-
--- AddPrefabPostInitAny(function(inst)
--- 	if inst and inst:HasTag("FX") then
--- print(inst.prefab)
--- 		if ThePlayer and (ThePlayer:HasTag("time_stopped") or ThePlayer:HasTag("canmoveintime")) then
--- print(1)
--- -- 			if inst.AnimState then
--- -- print(0)
--- -- 				inst.AnimState:Pause()
--- -- 			end
--- 			inst:Hide()
--- 		end
--- 		inst:ListenForEvent("time_stopped", function(inst)
--- print(2)
--- 			if inst.AnimState then
--- 				inst.AnimState:Pause()
--- 			end
--- 		end, TheWorld)
--- 		inst:ListenForEvent("time_resumed", function(inst)
--- 			if inst.AnimState then
--- 				inst.AnimState:Resume()
--- 			end
--- 		end, TheWorld)
--- 	end
--- end)
-
--- AddPrefabPostInit("rain", function(inst)
-	-- local tt = TheSim:GetTickTime()
-	-- local tick_time = function()
-	-- 	return TheWorld:HasTag("the_world") and 0 or tt
-	-- end
-    -- local desired_particles_per_second = 0--1000
-    -- local desired_splashes_per_second = 0--100
-    -- inst.particles_per_tick = desired_particles_per_second * tick_time()
-    -- inst.splashes_per_tick = desired_splashes_per_second * tick_time()
-	-- inst:DoPeriodicTask(0.1, function()
-	-- 	inst.particles_per_tick = desired_particles_per_second * tick_time()
-	-- 	inst.splashes_per_tick = desired_splashes_per_second * tick_time()
-	-- end)
-	-- local TEXTURE = "fx/rain.tex"
-	-- local SHADER = "shaders/vfx_particle.ksh"
-	-- local COLOUR_ENVELOPE_NAME = "raincolourenvelope"
-	-- local SCALE_ENVELOPE_NAME = "rainscaleenvelope"
-	-- local MAX_LIFETIME = 2
-	-- local MIN_LIFETIME = 2
-	-- local effect = inst.entity:AddVFXEffect()
-    -- effect:InitEmitters(1)
-    -- effect:SetRenderResources(0, TEXTURE, SHADER)
-    -- effect:SetRotationStatus(0, true)
-    -- effect:SetMaxNumParticles(0, 4800)
-    -- effect:SetMaxLifetime(0, MAX_LIFETIME)
-    -- effect:SetColourEnvelope(0, COLOUR_ENVELOPE_NAME)
-    -- effect:SetScaleEnvelope(0, SCALE_ENVELOPE_NAME)
-    -- effect:SetBlendMode(0, BLENDMODE.Premultiplied)
-    -- effect:SetSortOrder(0, 3)
-    -- effect:SetDragCoefficient(0, .2)
-    -- effect:EnableDepthTest(0, true)
-	-- local bx, by, bz = 0, 20, 0
-	-- local emitter_shape = CreateBoxEmitter(bx, by, bz, bx + 20, by, bz + 20)
-    -- local angle = 0
-    -- local dx = math.cos(angle * PI / 180)
-    -- effect:SetAcceleration(0, dx, -9.80, 1)
-    -- local function emit_fn()
-    --     local vy = -2 - 8 * UnitRand()
-    --     local vz = 0
-    --     local vx = dx
-    --     local lifetime = MIN_LIFETIME + (MAX_LIFETIME - MIN_LIFETIME) * UnitRand()
-    --     local px, py, pz = emitter_shape()
-
-    --     effect:AddRotatingParticle(
-    --         0,                  -- the only emitter
-    --         lifetime,           -- lifetime
-    --         px, py, pz,         -- position
-    --         vx, vy, vz,         -- velocity
-    --         angle, 0            -- angle, angular_velocity
-    --     )
-    -- end
-    -- local raindrop_offset = CreateDiscEmitter(20)
-	-- EmitterManager:AddEmitter(inst, nil, function(fastforward)
-	-- 	while inst.num_particles_to_emit > 0 do
-    --         emit_fn()
-    --         inst.num_particles_to_emit = inst.num_particles_to_emit - 1
-    --     end
-
-    --     while inst.num_splashes_to_emit > 0 and not TheWorld:HasTag("the_world") do
-    --         local x, y, z = inst.Transform:GetWorldPosition()
-    --         local dx, dz = raindrop_offset()
-
-    --         x = x + dx
-    --         z = z + dz
-
-    --         --if map:IsPassableAtPoint(x, y, z) then
-    --             local raindrop = SpawnPrefab("raindrop")
-    --             raindrop.Transform:SetPosition(x, y, z)
-
-    --             if fastforward ~= nil then
-    --                 raindrop.AnimState:FastForward(fastforward)
-    --             end
-
-    --         --end
-    --         inst.num_splashes_to_emit = inst.num_splashes_to_emit - 1
-    --     end
-
-    --     inst.num_particles_to_emit = inst.num_particles_to_emit + inst.particles_per_tick
-    --     inst.num_splashes_to_emit = inst.num_splashes_to_emit + inst.splashes_per_tick
-
-	-- end)
--- end)

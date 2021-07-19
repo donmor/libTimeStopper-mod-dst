@@ -9,7 +9,6 @@ end
 
 local timestopper_world = Class(function(self, inst)
     self.inst = inst
-    -- self.hosts = {}
     self.twents = {}
     self.releasingfn = nil
 end,
@@ -18,27 +17,9 @@ nil,
 
 })
 
--- function timestopper_world:GetHosts()
---     return self.hosts
--- end
-
--- function timestopper_world:MakeEntityMove(inst)
---     inst:AddTag("canmoveintime")
---     inst:PushEvent
--- end
-
-
--- function timestopper_world:RevokeEntityMove(inst)
---     inst
--- end
-
 function timestopper_world:OnPeriod()
     for k, v in pairs(AllPlayers) do
-        -- v.instoppedtime:set(true)
         local x0, y0, z0 = v.Transform:GetWorldPosition()
-        -- for _, v in pairs(TheSim:FindEntities(x0, y0, z0, TUNING.TIMESTOPPER_PERFORMANCE_MODE and 1000 or 50, {"player"})) do
-        --     v:AddTag("instoppedtime")
-        -- end
         for k, v in pairs(TheSim:FindEntities(x0, y0, z0, TUNING.TIMESTOPPER_PERFORMANCE_MODE and 1000 or 50, nil, {"wall", "INLIMBO", "time_stopped", "canmoveintime"})) do
             if v and v:IsValid() then
                 if v.AnimState then
@@ -63,7 +44,6 @@ function timestopper_world:OnPeriod()
                         v.components.combat:SetTarget(nil)
                     end
                     if v.components.locomotor then
-                        -- v.components.locomotor:StopMoving()
                         v.components.locomotor:StopUpdatingInternal()
                     end
                     if v.components.playercontroller then
@@ -83,46 +63,6 @@ function timestopper_world:OnPeriod()
             end
         end
     end
-	-- for k, v in pairs(self.twents) do
-	-- 	if v and v:IsValid() and not v:HasTag("time_stopped") and not v:HasTag("canmoveintime") then
-    --         if TheWorld.ismastersim then
-    --             if v.AnimState then
-    --                 v.AnimState:Pause()
-    --             end
-    --             if v.Physics then
-    --                 local mass = v.Physics:GetMass()
-    --                 if v.Physics:GetCollisionGroup() == COLLISION.OBSTACLES then
-    --                     -- Ignore OBSTACLES
-    --                 elseif mass ~= 0 or v.Physics:GetMotorVel() ~= 0 then --质量为0, 但不是障碍物, 如海浪
-    --                     v.vmass = v.Physics:GetMass()
-    --                     v.Physics:SetMass(0)
-    --                     v.Physics:SetActive(false)
-    --                 end
-    --             end
-    --             v:StopBrain()
-    --             if v.sg then
-    --                 v.sg:Stop()
-    --             end
-    --             if v.components.combat then
-    --                 v.components.combat:SetTarget(nil)
-    --             end
-    --             if v.components.locomotor then
-    --                 -- v.components.locomotor:StopMoving()
-    --                 v.components.locomotor:StopUpdatingInternal()
-    --             end
-    --             if v.components.playercontroller then
-    --                 v.components.playercontroller:Enable(false)
-    --             end
-    --             if TUNING.TIMESTOPPER_INVINCIBLE_FOE then
-    --                 v.components.health:SetInvincible(true)
-    --             end
-    --             if not v:HasTag("time_stopped") then
-    --                 v:AddTag("time_stopped")
-    --                 v:PushEvent("time_stopped")
-    --             end
-    --         end
-	-- 	end
-	-- end
 end
 
 function timestopper_world:OnResume()
@@ -166,13 +106,10 @@ function timestopper_world:OnResume()
         end
     end
     self.twents = {}
-    -- TheWorld:PushEvent("time_resumed")
-    -- TheWorld.time_stopped:set(false)
 end
 
 
 function timestopper_world:DoTimeStop(host, time, silent)
-    -- table.insert(self.hosts, host)
     host:AddTag("canmoveintime")
     if not host.components.timer:TimerExists("canmoveintime") then
         host.components.timer:StartTimer("canmoveintime", time + 0.1)
@@ -193,8 +130,6 @@ function timestopper_world:DoTimeStop(host, time, silent)
     end
     if not TheWorld:HasTag("the_world") then
         TheWorld.twtask = TheWorld:DoPeriodicTask(0.1, function() self:OnPeriod() end)
-        -- TheWorld:PushEvent("the_world")
-        -- TheWorld.time_stopped:set(true)
         for k, v in pairs(AllPlayers) do
             v.instoppedtime:set(true)
         end
@@ -232,9 +167,6 @@ function timestopper_world:DoTimeStop(host, time, silent)
         if host.components.timestopper then 
             host.components.timestopper:OnTimeStopped(true)
         end
-
-
-
     end
     if not TheWorld.twlistener then
         TheWorld:ListenForEvent("timerdone", function(inst, data)

@@ -19,8 +19,8 @@ local function gethost(inst)
     end
 end
 
-function timestopper:DoTimeStop(time)
-    TheWorld.components.timestopper_world:DoTimeStop(gethost(self.inst), time)
+function timestopper:DoTimeStop(time, silent)
+    TheWorld.components.timestopper_world:DoTimeStop(gethost(self.inst), time, silent)
     self.stoppingtime = true
     gethost(self.inst):DoTaskInTime(time + 0.1, function()
         self.stoppingtime = false
@@ -31,20 +31,20 @@ function timestopper:IsStoppingTime()
     return self.stoppingtime
 end
 
-function timestopper:SetOnTimeStoppedFn(fn) -- = function(silent)
+function timestopper:SetOnTimeStoppedFn(fn)
     self.ontimestoppedfn = fn
 end
 
-function timestopper:SetOnResumingFn(time, fn) -- = function(silent)
+function timestopper:SetOnResumingFn(time, fn)
     self.onresumingtime = time
     self.onresumingfn = fn
 end
 
-function timestopper:SetOnResumedFn(fn) -- = function(silent)
+function timestopper:SetOnResumedFn(fn)
     self.onresumedfn = fn
 end
 
-function timestopper:GetOnResumingFn() -- = function(silent)
+function timestopper:GetOnResumingFn()
     return self.onresumingfn
 end
 
