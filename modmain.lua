@@ -10,66 +10,73 @@ end
 SYS_INITGLOBAL()
 
 TUNING.TIMESTOPPER_PERFORMANCE_MODE = GetModConfigData("performance_mode")
+TUNING.TIMESTOPPER_IGNORE_SHADOW = GetModConfigData("ignore_shadow")
 TUNING.TIMESTOPPER_INVINCIBLE_FOE = GetModConfigData("invincible_foe")
 
 AddComponentPostInit("projectile", function(self)	-- <改写投射物等API以达到时停效果
-	self.theworldstate = nil
-	self.origspeed = nil
+	-- self.theworldstate = nil
+	self.origspeed = self.speed
 	local pSetSpeed = self.SetSpeed
 	self.SetSpeed = function(self, speed)
 		self.origspeed = speed
 		return pSetSpeed(self, speed)
 	end
-	self.SetOnTheworldTriggeredFn = function(self, fn)
-		self.ontheworldtriggeredfn = fn
-	end
-	self.OnTheworldTriggered = function(self, sw)
-		if self.ontheworldtriggeredfn ~= nil then
-			self.ontheworldtriggeredfn(self.inst, sw, self.origspeed)
-		end
-		if sw then
-			if self.speed >= self.origspeed then
-				self.speed = self.origspeed / 4
-				self.inst.Physics:SetMotorVel(self.origspeed / 4, 0, 0)
-				self.inst:DoTaskInTime((120 + 30 * math.random()) * FRAMES / self.origspeed, function()
-					if TheWorld:HasTag("the_world") and self:IsThrown() then
-						self.speed = 0.1
-						self.inst.Physics:SetMotorVel(self.speed, 0, 0)
-					end
-				end)
-			end
-		else
-			if self.speed <= self.origspeed / 4 then
-				self.speed = self.origspeed / 4 + 1
-				self.inst.Physics:SetMotorVel(self.origspeed / 4 + 1, 0, 0)
-				self.inst:DoTaskInTime((120 + 30 * math.random()) * FRAMES / self.origspeed, function()
-					if self:IsThrown() then
-						self.speed = self.origspeed
-						self.inst.Physics:SetMotorVel(self.speed, 0, 0)
-					end
-				end)
-			end
-		end
-	end
+	-- self.SetOnTheworldTriggeredFn = function(self, fn)
+	-- 	self.ontheworldtriggeredfn = fn
+	-- end
+	-- self.OnTheworldTriggered = function(self, sw)
+	-- 	-- if self.ontheworldtriggeredfn ~= nil then
+	-- 	-- 	self.ontheworldtriggeredfn(self.inst, sw, self.origspeed)
+	-- 	-- end
+	-- 	if sw then
+	-- 		if self.speed >= self.origspeed then
+	-- 			self.speed = self.origspeed / 4
+	-- 			self.inst.Physics:SetMotorVel(self.origspeed / 4, 0, 0)
+	-- 			self.inst:DoTaskInTime((120 + 30 * math.random()) * FRAMES / self.origspeed, function()
+	-- 				if TheWorld:HasTag("the_world") and self:IsThrown() then
+	-- 					self.speed = 0
+	-- 					self.inst.Physics:SetMotorVel(self.speed, 0, 0)
+	-- 				end
+	-- 			end)
+	-- 		end
+	-- 	else
+	-- 		if self.speed <= self.origspeed / 4 then
+	-- 			self.speed = self.origspeed / 4 + 1
+	-- 			self.inst.Physics:SetMotorVel(self.origspeed / 4 + 1, 0, 0)
+	-- 			self.inst:DoTaskInTime((120 + 30 * math.random()) * FRAMES / self.origspeed, function()
+	-- 				if self:IsThrown() then
+	-- 					self.speed = self.origspeed
+	-- 					self.inst.Physics:SetMotorVel(self.speed, 0, 0)
+	-- 				end
+	-- 			end)
+	-- 		end
+	-- 	end
+	-- end
 	local pStop = self.Stop
 	self.Stop = function(self)
-		local ret = pStop(self)
 		self.speed = self.origspeed
-		self.theworldstate = nil
-		return ret
-	end
-	local pOnUpdate = self.OnUpdate
-	self.OnUpdate = function(self, dt)
-		if self.target ~= nil then
-			if TheWorld:HasTag("the_world") then
-				self:OnTheworldTriggered(true)
-			elseif self.theworldstate and not TheWorld:HasTag("the_world") then
-				self:OnTheworldTriggered(false)
-			end
-			self.theworldstate = TheWorld:HasTag("the_world")
+		if self.inst.projspeedtask then
+			self.inst.projspeedtask:Cancel()
+			self.inst.projspeedtask = nil
 		end
-		return pOnUpdate(self, dt)
+		-- self.theworldstate = nil
+		return pStop(self)
 	end
+	-- local pOnUpdate = self.OnUpdate
+	-- self.OnUpdate = function(self, dt)
+	-- 	if self.target ~= nil then
+	-- 		print(self.inst:HasTag("time_stopped"))
+	-- 		-- if self.inst:HasTag("time_stopped") then
+	-- 		if TheWorld:HasTag("the_world") then
+	-- 			-- self:OnTheworldTriggered(true)
+	-- 		else
+	-- 		-- elseif self.theworldstate and not TheWorld:HasTag("the_world") then
+	-- 			-- self:OnTheworldTriggered(false)
+	-- 		end
+	-- 		-- self.theworldstate = TheWorld:HasTag("the_world")
+	-- 	end
+	-- 	return pOnUpdate(self, dt)
+	-- end
 end)
 
 AddComponentPostInit("burnable", function(self)	-- <改写燃烧API
@@ -110,28 +117,42 @@ AddComponentPostInit("burnable", function(self)	-- <改写燃烧API
 	-- 		end
 	-- 	end
 	-- end
-	local pExtendBurning = self.ExtendBurning
-	self.ExtendBurning = function(self)
-		if not self.twevent then 
-			self.twevent = self.inst:ListenForEvent("time_stopped", function()
+	local function eventfn()
 				if self.task then 
 					self.taskfn = self.task.fn
-					self.taskremaining = self.task:NextTime()
+					self.taskremaining = GetTimeForTick(self.task.nexttick - GetTick())
 					if self.taskfn and self.taskremaining then 
 						self.task:Cancel()
 						self.task = nil
 					end
 				end
-			end)
+	end
+	local pExtendBurning = self.ExtendBurning
+	self.ExtendBurning = function(self)
+		if not self.twevent then 
+			self.twevent = self.inst:ListenForEvent("time_stopped", eventfn)
+			-- self.twevent = self.inst:ListenForEvent("time_stopped", function()
+				-- if self.task then 
+				-- 	self.taskfn = self.task.fn
+				-- 	self.taskremaining = GetTimeForTick(Getself.task.nexttick - GetTick())
+				-- 	if self.taskfn and self.taskremaining then 
+				-- 		self.task:Cancel()
+				-- 		self.task = nil
+				-- 	end
+				-- end
+			-- end)
 		end
 		if not self.twevent2 then 
 			self.twevent2 = self.inst:ListenForEvent("time_resumed", function()
-				if not self.task and self.taskfn and self.taskremaining then 
-					self.task = self.inst:DoTaskInTime(self.taskremaining, self.taskfn, self)
+				if not self.task and self.taskfn and self.taskremaining then
+					self.task = self.inst:DoTaskInTime(self.taskremaining > 0 and self.taskremaining or FRAMES * 3, self.taskfn, self)
 				end
 			end)
 		end
-		return pExtendBurning(self)
+		pExtendBurning(self)
+		if self.inst:HasTag("time_stopped") then
+			self.inst:DoTaskInTime(FRAMES, eventfn)
+		end
 		-- if self.task ~= nil then
 		-- 	self.task:Cancel()
 		-- end

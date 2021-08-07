@@ -7,6 +7,12 @@ local function IsInTable(tbl, value)
 	return false;
 end
 
+local function getdist(ent1, ent2)
+    local x1, y1, z1 = ent1.Transform:GetWorldPosition()
+    local x2, y2, z2 = ent2.Transform:GetWorldPosition()
+    return math.sqrt((x1 - x2) ^ 2 + (z1 - z2) ^ 2)
+end
+
 local timestopper_world = Class(function(self, inst)
     self.inst = inst
     self.twents = {}
@@ -21,21 +27,69 @@ function timestopper_world:OnPeriod()
     for k, v in pairs(AllPlayers) do
         local x0, y0, z0 = v.Transform:GetWorldPosition()
         for k, v in pairs(TheSim:FindEntities(x0, y0, z0, TUNING.TIMESTOPPER_PERFORMANCE_MODE and 1000 or 50, nil, {"wall", "INLIMBO", "time_stopped", "canmoveintime"})) do
-            if v and v:IsValid() then
-                if v.AnimState then
+            if v and v:IsValid() and not IsInTable(v, self.twents) and
+                    not (TUNING.TIMESTOPPER_IGNORE_SHADOW and
+                    (v:HasTag("shadowcreature") or
+                    string.find(v.prefab or "", "shadowhand") == 1 or
+                    string.find(v.prefab or "", "waveyjones") == 1 or
+                    v.prefab == "shadowskittish" or
+                    v.prefab == "shadowwatcher" or
+                    v.prefab == "creepyeyes")) then
+                local projcomp = v.components.projectile
+                local isproj = projcomp and projcomp:IsThrown()
+                if v.AnimState and not isproj then
                     v.AnimState:Pause()
+                end
                 if v.Physics then
                     local mass = v.Physics:GetMass()
                     if v.Physics:GetCollisionGroup() == COLLISION.OBSTACLES then
                         -- Ignore OBSTACLES
                     elseif mass ~= 0 or v.Physics:GetMotorVel() ~= 0 then --质量为0, 但不是障碍物, 如海浪
-                        v.vmass = v.Physics:GetMass()
-                        v.Physics:SetMass(0)
-                        v.Physics:SetActive(false)
+                        v.vmass = mass
+                        if isproj then
+                            local ospeed = projcomp.origspeed
+                            -- v.projspeedtask = v:DoPeriodicTask(90/4/30/30, function()
+                            --     projcomp.speed = projcomp.speed - 6
+                            local mult = math.random(80, 110) / 100
+                            if v.projspeedtask then
+                                v.projspeedtask:Cancel()
+                                v.projspeedtask = nil
+                            end
+                            local function projspeedfn()
+                                projcomp.speed = projcomp.speed - mult * ospeed / 3
+                                if projcomp.speed < 0 or projcomp.target and projcomp.hitdist + projcomp.target:GetPhysicsRadius(0) >= getdist(v, projcomp.target) then   -- TODO: TESTING
+                                    projcomp.speed = 0
+                                end
+                                v.Physics:SetMotorVel(projcomp.speed, 0, 0)
+                                if projcomp.speed == 0 and v.projspeedtask then
+                                    v.projspeedtask:Cancel()
+                                    v.projspeedtask = nil
+                                    if v.AnimState then
+                                        v.AnimState:Pause()
+                                    end
+                                    v.Physics:SetMass(0)
+                                end
+                            end
+                            v.projspeedtask = v:DoPeriodicTask(1 / ospeed, projspeedfn)
+                            projspeedfn()
+                            -- if projcomp.speed >= projcomp.origspeed then
+                            --     projcomp.speed = projcomp.origspeed / 4
+                            --     v.Physics:SetMotorVel(projcomp.speed, 0, 0)
+                            --     v:DoTaskInTime((180 + math.random(0, 60)) * FRAMES / projcomp.origspeed, function()
+                            --         projcomp.speed = 0
+                            --         v.Physics:SetMotorVel(projcomp.speed, 0, 0)
+                            --         if v.AnimState then
+                            --             v.AnimState:Pause()
+                            --         end
+                            --     end)
+                            -- end                
+                        else
+                            v.Physics:SetMass(0)
+                            v.Physics:SetActive(false)
+                        end
                     end
                 end
                 if TheWorld.ismastersim then
-                    end
                     v:StopBrain()
                     if v.sg then
                         v.sg:Stop()
@@ -49,7 +103,7 @@ function timestopper_world:OnPeriod()
                     if v.components.playercontroller then
                         v.components.playercontroller:Enable(false)
                     end
-                    if TUNING.TIMESTOPPER_INVINCIBLE_FOE then
+                    if TUNING.TIMESTOPPER_INVINCIBLE_FOE and v.components.health then
                         v.components.health:SetInvincible(true)
                     end
                 end
@@ -71,6 +125,8 @@ function timestopper_world:OnResume()
     end
     for k, v in pairs(self.twents) do
         if v:HasTag("time_stopped") then
+            local projcomp = v.components.projectile
+            local isproj = projcomp and projcomp:IsThrown()
             if v.AnimState then
                 v.AnimState:Resume()
             end
@@ -81,8 +137,36 @@ function timestopper_world:OnResume()
                     if v.vmass then
                         v.Physics:SetMass(v.vmass)
                     end
-                    v.Physics:SetActive(true)
-                end
+                    if isproj then
+                        local ospeed = projcomp.origspeed
+                        local mult = math.random(80, 110) / 100
+                        if v.projspeedtask then
+                            v.projspeedtask:Cancel()
+                            v.projspeedtask = nil
+                        end
+                        v.projspeedtask = v:DoPeriodicTask(1 / ospeed, function()
+                            projcomp.speed = projcomp.speed + mult * ospeed / 3
+                            if projcomp.speed > ospeed or projcomp.target and projcomp.hitdist + projcomp.target:GetPhysicsRadius(0) >= getdist(v, projcomp.target) then
+                                projcomp.speed = ospeed
+                            end
+                            v.Physics:SetMotorVel(projcomp.speed, 0, 0)
+                            if projcomp.speed == ospeed and v.projspeedtask then
+                                v.projspeedtask:Cancel()
+                                v.projspeedtask = nil
+                            end
+                        end)
+                    -- if projcomp.speed < projcomp.origspeed / 4 then
+                        --     projcomp.speed = projcomp.origspeed / 4 + 1
+                        --     v.Physics:SetMotorVel(projcomp.origspeed / 4 + 1, 0, 0)
+                        --     v:DoTaskInTime((180 + math.random(0, 60)) * FRAMES / projcomp.origspeed, function()
+                        --         projcomp.speed = projcomp.origspeed
+                        --         v.Physics:SetMotorVel(projcomp.speed, 0, 0)
+                        --     end)
+                        -- end
+                    else
+                        v.Physics:SetActive(true)
+                    end
+            end
             end
             if TheWorld.ismastersim then
                 v:RestartBrain()

@@ -93,6 +93,45 @@ configuration_options =
         },
         default = false,
     },
+
+    {
+        name = "ignore_shadow",
+        label = LIMBO({
+            "Ignore shadow creature",
+            ["zh"] = "排除影怪",
+            ["zhr"] = "排除影怪",
+        }),
+        options =
+        {
+            {
+                description = LIMBO({
+                    "Enable",
+                    ["zh"] = "开启",
+                    ["zhr"] = "开启",
+                }),
+                data = true,
+                hover = LIMBO({
+                    "Nightmare creatures won't be stopped",
+                    ["zh"] = "影怪不受时停影响(仅限与理智相关的)",
+                    ["zhr"] = "影怪不受时停影响(仅限与理智相关的)",
+                })
+            },
+            {
+                description = LIMBO({
+                    "Disable",
+                    ["zh"] = "关闭",
+                    ["zhr"] = "关闭",
+                }),
+                data = false,
+                hover = LIMBO({
+                    "Nightmare creatures could be stopped (only those related to sanity)",
+                    ["zh"] = "所有影怪可被时停",
+                    ["zhr"] = "所有影怪可被时停",
+                }),
+            },
+        },
+        default = true,
+    },
     
     {
         name = "invincible_foe",
