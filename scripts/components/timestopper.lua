@@ -1,4 +1,4 @@
-local timestopper = Class(function(self, inst)
+local TimeStopper = Class(function(self, inst)
     self.inst = inst
     self.ontimestoppedfn = nil
     self.onresumingtime = 0
@@ -19,7 +19,7 @@ local function gethost(inst)
     end
 end
 
-function timestopper:DoTimeStop(time, silent)
+function TimeStopper:DoTimeStop(time, silent)
     TheWorld.components.timestopper_world:DoTimeStop(gethost(self.inst), time, silent)
     self.stoppingtime = true
     gethost(self.inst):DoTaskInTime(time + 0.1, function()
@@ -27,42 +27,42 @@ function timestopper:DoTimeStop(time, silent)
     end)
 end
 
-function timestopper:IsStoppingTime()
+function TimeStopper:IsStoppingTime()
     return self.stoppingtime
 end
 
-function timestopper:SetOnTimeStoppedFn(fn)
+function TimeStopper:SetOnTimeStoppedFn(fn)
     self.ontimestoppedfn = fn
 end
 
-function timestopper:SetOnResumingFn(time, fn)
+function TimeStopper:SetOnResumingFn(time, fn)
     self.onresumingtime = time
     self.onresumingfn = fn
 end
 
-function timestopper:SetOnResumedFn(fn)
+function TimeStopper:SetOnResumedFn(fn)
     self.onresumedfn = fn
 end
 
-function timestopper:GetOnResumingFn()
+function TimeStopper:GetOnResumingFn()
     return self.onresumingfn
 end
 
 
-function timestopper:OnTimeStopped(silent)
+function TimeStopper:OnTimeStopped(silent)
     if self.ontimestoppedfn then
         self.ontimestoppedfn(silent)
     end
 end
 
-function timestopper:OnResumed(silent)
+function TimeStopper:OnResumed(silent)
     if self.onresumedfn then
         self.onresumedfn(silent)
     end
 end
 
-function timestopper:GetResumingTimer()
+function TimeStopper:GetResumingTimer()
     return self.onresumingtime
 end
 
-return timestopper
+return TimeStopper

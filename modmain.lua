@@ -282,10 +282,38 @@ AddPrefabPostInit("beefalo", function(inst)
 end)
 
 AddPlayerPostInit(function(inst)
+	inst.instoppedtime = net_bool(inst.GUID, "stopped", "instoppedtime")
+    inst:DoTaskInTime(0, function()
+        -- inst:ListenForEvent("timerdone", function(inst, data)
+        --     if data.name == "canmoveintime" then
+        --         if inst:HasTag("canmoveintime") then
+        --             inst:RemoveTag("canmoveintime")
+        --         end
+        --     end
+        -- end)
+        inst:ListenForEvent("instoppedtime", function(inst)
+			-- print("000")
+			local x, y, z = inst.Transform:GetWorldPosition()
+			local ents = TheSim:FindEntities(x, y, z, 1, { "FX" })
+			for k, v in pairs(ents) do
+				v:PushEvent("instoppedtime")
+			end
+		-- 	local em = {}
+		-- 	for k, v in pairs(Precipitation) do
+		-- 		local FindEntity
+		-- 	end
+            -- if data.name == "canmoveintime" then
+            --     if inst:HasTag("canmoveintime") then
+            --         inst:RemoveTag("canmoveintime")
+            --     end
+            -- end
+        end)
+    end)
+end)
+AddPrefabPostInitAny(function(inst)
     if not inst.components.timer then
         inst:AddComponent("timer")
     end
-	inst.instoppedtime = net_bool(inst.GUID, "stopped", "instoppedtime")
     inst:DoTaskInTime(0, function()
         inst:ListenForEvent("timerdone", function(inst, data)
             if data.name == "canmoveintime" then
@@ -315,12 +343,18 @@ for k, v in pairs(Precipitation)do
 		local function vfxon(inst)
 			inst.VFXEffect:SetDragCoefficient(0,v)
 		end
-		inst:DoPeriodicTask(0.1, function(inst)
-			if ThePlayer and ThePlayer.instoppedtime:value() then
-				vfxoff(inst)
-			else
-				vfxon(inst)
-			end
+		local function checktw(inst)
+			-- print("CHK")
+				if ThePlayer and ThePlayer.instoppedtime:value() then
+					vfxoff(inst)
+				else
+					vfxon(inst)
+				end
+		end
+		inst:DoTaskInTime(FRAMES, function()
+			-- inst:DoPeriodicTask(0.1, checktw)
+			checktw(inst)
+			inst:ListenForEvent("instoppedtime", checktw)
 		end)
 	end)
 end
