@@ -9,9 +9,10 @@ local function SYS_INITGLOBAL()
 end
 SYS_INITGLOBAL()
 
-TUNING.TIMESTOPPER_PERFORMANCE_MODE = GetModConfigData("performance_mode")
-TUNING.TIMESTOPPER_IGNORE_SHADOW = GetModConfigData("ignore_shadow")
-TUNING.TIMESTOPPER_INVINCIBLE_FOE = GetModConfigData("invincible_foe")
+TUNING.TIMESTOPPER_PERFORMANCE = GetModConfigData("performance") or 500
+TUNING.TIMESTOPPER_IGNORE_SHADOW = GetModConfigData("ignore_shadow") or true
+TUNING.TIMESTOPPER_INVINCIBLE_FOE = GetModConfigData("invincible_foe") or false
+TUNING.TIMESTOPPER_GREYSCREEN = GetModConfigData("greyscreen") or true
 
 AddComponentPostInit("projectile", function(self)	-- <改写投射物等API以达到时停效果
 	-- self.theworldstate = nil
@@ -282,7 +283,7 @@ AddPrefabPostInit("beefalo", function(inst)
 end)
 
 AddPlayerPostInit(function(inst)
-	inst.instoppedtime = net_bool(inst.GUID, "stopped", "instoppedtime")
+	inst.instoppedtime = net_float(inst.GUID, "stopped", "instoppedtime")
     inst:DoTaskInTime(0, function()
         -- inst:ListenForEvent("timerdone", function(inst, data)
         --     if data.name == "canmoveintime" then
@@ -293,11 +294,24 @@ AddPlayerPostInit(function(inst)
         -- end)
         inst:ListenForEvent("instoppedtime", function(inst)
 			-- print("000")
-			local x, y, z = inst.Transform:GetWorldPosition()
-			local ents = TheSim:FindEntities(x, y, z, 1, { "FX" })
-			for k, v in pairs(ents) do
-				v:PushEvent("instoppedtime")
-			end
+				local time = inst.instoppedtime and inst.instoppedtime:value() or nil
+				if TUNING.TIMESTOPPER_GREYSCREEN and time and time > 0 then
+					if time < 1 then
+						TheWorld:PushEvent("overridecolourcube", "images/colour_cubes/ghost_cc.tex")
+					else
+						TheWorld:PushEvent("overridecolourcube", "images/colour_cubes/mole_vision_on_cc.tex")
+						TheWorld:DoTaskInTime(0.5, function()
+							TheWorld:PushEvent("overridecolourcube", "images/colour_cubes/ghost_cc.tex")
+						end)
+					end
+				elseif time and time == 0 then
+					TheWorld:PushEvent("overridecolourcube", nil)
+				end	
+				local x, y, z = inst.Transform:GetWorldPosition()
+				local ents = TheSim:FindEntities(x, y, z, 1, { "FX" })
+				for k, v in pairs(ents) do
+					v:PushEvent("instoppedtime")
+				end
 		-- 	local em = {}
 		-- 	for k, v in pairs(Precipitation) do
 		-- 		local FindEntity

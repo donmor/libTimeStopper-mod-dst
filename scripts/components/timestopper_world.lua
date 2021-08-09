@@ -136,7 +136,7 @@ local function resume(ent)
     end
     if TheWorld.ismastersim then
         ent:RestartBrain()
-        if ent.sg then
+        if ent.sg and ent.sg.stopped then
             ent.sg:Start()
         end
         if ent.components.locomotor then
@@ -157,8 +157,8 @@ end
 function TimeStopper_World:OnPeriod()
     for k, v in pairs(AllPlayers) do
         local x0, y0, z0 = v.Transform:GetWorldPosition()
-        for k, v in pairs(TheSim:FindEntities(x0, y0, z0, TUNING.TIMESTOPPER_PERFORMANCE_MODE and 1000 or 50, nil, {"wall", "INLIMBO", "time_stopped", "canmoveintime"})) do
-            if v and v:IsValid() and not IsInTable(v, self.twents) and
+        for k, v in pairs(TheSim:FindEntities(x0, y0, z0, TUNING.TIMESTOPPER_PERFORMANCE, nil, {"wall", "INLIMBO", "time_stopped", "canmoveintime"})) do
+            if v and v:IsValid() and
                     not (v.prefab == "abigail" and v.components.follower:GetLeader():HasTag("canmoveintime")) and
                     not (TUNING.TIMESTOPPER_IGNORE_SHADOW and
                     (v:HasTag("shadowcreature") or
@@ -254,7 +254,7 @@ end
 
 function TimeStopper_World:OnResume()
     for k, v in pairs(AllPlayers) do
-        v.instoppedtime:set(false)
+        v.instoppedtime:set(0)
     end
     for k, v in pairs(self.twents) do
         if v:HasTag("time_stopped") then
@@ -327,7 +327,7 @@ function TimeStopper_World:OnResume()
 end
 
 
-function TimeStopper_World:DoTimeStop(host, time, silent)
+function TimeStopper_World:DoTimeStop(host, time, silent, nogrey)
     self:ResumeEntity(host, time)
     -- host:AddTag("canmoveintime")
     -- if not host.components.timer:TimerExists("canmoveintime") then
@@ -370,7 +370,10 @@ function TimeStopper_World:DoTimeStop(host, time, silent)
     if not TheWorld:HasTag("the_world") then
         TheWorld.twtask = TheWorld:DoPeriodicTask(0.1, function() self:OnPeriod() end)
         for k, v in pairs(AllPlayers) do
-            v.instoppedtime:set(true)
+            v.instoppedtime:set(nogrey and -time or time)
+            -- if TUNING.TIMESTOPPER_GREYSCREEN and not nogrey then
+            --     v:PushEvent("")
+            -- end
         end
         if not TheWorld.components.timer:TimerExists("the_world") then
             TheWorld.components.timer:StartTimer("the_world", time)
@@ -378,6 +381,16 @@ function TimeStopper_World:DoTimeStop(host, time, silent)
             TheWorld.components.timer:SetTimeLeft("the_world", time)
         end
         TheWorld:AddTag("the_world")
+        -- if TUNING.TIMESTOPPER_GREYSCREEN and not nogrey then
+        --     if time < 1 then
+        --          TheWorld:PushEvent("overridecolourcube", "images/colour_cubes/ghost_cc.tex")
+        --     else
+        --         TheWorld:PushEvent("overridecolourcube", "images/colour_cubes/mole_vision_on_cc.tex")
+        --         TheWorld:DoTaskInTime(0.5, function()
+        --             TheWorld:PushEvent("overridecolourcube", "images/colour_cubes/ghost_cc.tex")
+        --         end)
+        --     end
+        -- end
         if host.components.timestopper then 
             host.components.timestopper:OnTimeStopped(silent)
             if TheWorld.components.timer:TimerExists("twreleasing") then
@@ -420,6 +433,7 @@ function TimeStopper_World:DoTimeStop(host, time, silent)
                         TheWorld:RemoveTag("the_world")
                     end
                 end)
+                -- TheWorld:PushEvent("overridecolourcube", nil)
             end
             if data.name == "twreleasing" and self.releasingfn then -- TODO
                 self.releasingfn(silent)
@@ -493,7 +507,7 @@ function TimeStopper_World:ResumeEntity(ent, time)
     --         ent.components.health:SetInvincible(false)
     --     end
     -- end
-    if ent.components.ghostlybond then
+    if ent.components.ghostlybond and not ent.components.ghostlybond.notsummoned and ent.components.ghostlybond.ghost and ent.components.ghostlybond.ghost:IsValid() then
         -- local ghost = ent.components.ghostlybond.ghost
         -- if not ghost.components.timer then
         --     ghost:AddComponent("timer")

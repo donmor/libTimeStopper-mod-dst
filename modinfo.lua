@@ -13,7 +13,8 @@ libTimeStopper - Time stopping library
 
 Use this library to build mods of time-stopping psychics or items
 - Configurable powerful mode (Stopping the WHOLE map, can lead to performance problems)
-- Configurable Invincibility of stopped entities (depends on characteristics, etc.)
+- Configurable invincibility of stopped entities (depends on characteristics, etc.)
+- Configurable global grey screen effect
 See Readme.md for details.
 ]], ["zh"] = [[
 libTimeStopper - 时间停止支持库
@@ -24,16 +25,7 @@ libTimeStopper - 时间停止支持库
 使用本API快速构建相互兼容的时间停止能力者或道具
 ·可配置强力模式(全图时停, 极大消耗性能)
 ·可配置时停对象是否无敌(取决于人物设定等)
-附说明文档(Readme.md)
-]], ["zhr"] = [[
-libTimeStopper - 时间停止支持库
-
-※MOD制作新手, 请注意潜在的bug
-※大量API修改, 请注意兼容性问题
-
-使用本API快速构建相互兼容的时间停止能力者或道具
-·可配置强力模式(全图时停, 极大消耗性能)
-·可配置时停对象是否无敌(取决于人物设定等)
+·可配置时停时使用全局灰屏特效
 附说明文档(Readme.md)
 ]]})
 author = "donmor"
@@ -56,42 +48,59 @@ bugtracker_config = {
 configuration_options =
 {
     {
-        name = "powerful_mode",
+        name = "performance",
         label = LIMBO({
-            "Powerful mode",
-            ["zh"] = "强力模式",
-            ["zhr"] = "强力模式",
+            "Time-stopping mode",
+            ["zh"] = "时间停止模式",
         }),
         options =
         {
             {
                 description = LIMBO({
-                    "Enable",
-                    ["zh"] = "开启",
-                    ["zhr"] = "开启",
+                    "Performance mode",
+                    ["zh"] = "性能模式",
                 }),
-                data = true,
+                data = 50,
                 hover = LIMBO({
-                    "Stop the whole world(Too many lags, do on your own risk!)",
-                    ["zh"] = "时停整个世界(极卡, 后果自负!)",
-                    ["zhr"] = "时停整个世界(极卡, 后果自负!)",
-                })
+                    "Apply to current screen, for low-end devices",
+                    ["zh"] = "时停屏幕范围, 适用于低端机型",
+                }),
             },
             {
                 description = LIMBO({
-                    "Disable",
-                    ["zh"] = "关闭",
-                    ["zhr"] = "关闭",
+                    "Normal mode",
+                    ["zh"] = "正常模式",
                 }),
-                data = false,
+                data = 500,
                 hover = LIMBO({
-                    "Apply to current screen",
-                    ["zh"] = "时停屏幕范围",
-                    ["zhr"] = "时停屏幕范围",
+                    "Apply to a wide range, for most devices",
+                    ["zh"] = "时停较大范围, 适用于大部分机型",
                 }),
             },
+            {
+                description = LIMBO({
+                    "Normal mode",
+                    ["zh"] = "正常模式",
+                }),
+                data = 2000,
+                hover = LIMBO({
+                    "Apply to a wide range, for servers and high-end devices",
+                    ["zh"] = "时停更大范围, 适用于服务器及高端机型",
+                }),
+            },
+            {
+                description = LIMBO({
+                    "Powered mode",
+                    ["zh"] = "强力模式",
+                }),
+                data = 9001,
+                hover = LIMBO({
+                    "Stop the whole world(Many lags, do on your own risk!)",
+                    ["zh"] = "时停整个世界(很卡, 风险自负!)",
+                })
+            },
         },
-        default = false,
+        default = 500,
     },
 
     {
@@ -99,7 +108,6 @@ configuration_options =
         label = LIMBO({
             "Ignore shadow creature",
             ["zh"] = "排除影怪",
-            ["zhr"] = "排除影怪",
         }),
         options =
         {
@@ -107,26 +115,22 @@ configuration_options =
                 description = LIMBO({
                     "Enable",
                     ["zh"] = "开启",
-                    ["zhr"] = "开启",
                 }),
                 data = true,
                 hover = LIMBO({
                     "Nightmare creatures won't be stopped",
                     ["zh"] = "影怪不受时停影响(仅限与理智相关的)",
-                    ["zhr"] = "影怪不受时停影响(仅限与理智相关的)",
                 })
             },
             {
                 description = LIMBO({
                     "Disable",
                     ["zh"] = "关闭",
-                    ["zhr"] = "关闭",
                 }),
                 data = false,
                 hover = LIMBO({
                     "Nightmare creatures could be stopped (only those related to sanity)",
                     ["zh"] = "所有影怪可被时停",
-                    ["zhr"] = "所有影怪可被时停",
                 }),
             },
         },
@@ -138,7 +142,6 @@ configuration_options =
         label = LIMBO({
             "Invincible foe",
             ["zh"] = "目标无敌",
-            ["zhr"] = "目标无敌",
         }),
         options =
         {
@@ -146,29 +149,59 @@ configuration_options =
                 description = LIMBO({
                     "Enable",
                     ["zh"] = "开启",
-                    ["zhr"] = "开启",
                 }),
                 data = true,
                 hover = LIMBO({
                     "Make entities invincible if time-stopped",
                     ["zh"] = "被停止的实体无敌",
-                    ["zhr"] = "被停止的实体无敌",
                 }),
             },
             {
                 description = LIMBO({
                     "Disable",
                     ["zh"] = "关闭",
-                    ["zhr"] = "关闭",
                 }),
                 data = false,
                 hover = LIMBO({
                     "Normally take damage",
                     ["zh"] = "被停止的实体正常受到伤害",
-                    ["zhr"] = "被停止的实体正常受到伤害",
                 }),
             },
         },
         default = false,
+    },
+
+    {
+        name = "greyscreen",
+        label = LIMBO({
+            "Global grey screen effect",
+            ["zh"] = "全局灰屏特效",
+        }),
+        options =
+        {
+            {
+                description = LIMBO({
+                    "Enable",
+                    ["zh"] = "开启",
+                }),
+                data = true,
+                hover = LIMBO({
+                    "Screen greys on time stopped",
+                    ["zh"] = "时间停止时屏幕变灰",
+                }),
+            },
+            {
+                description = LIMBO({
+                    "Disable",
+                    ["zh"] = "关闭",
+                }),
+                data = false,
+                hover = LIMBO({
+                    "Normal vision",
+                    ["zh"] = "正常视效",
+                }),
+            },
+        },
+        default = true,
     }
 }

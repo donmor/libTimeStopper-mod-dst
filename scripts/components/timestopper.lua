@@ -19,8 +19,8 @@ local function gethost(inst)
     end
 end
 
-function TimeStopper:DoTimeStop(time, silent)
-    TheWorld.components.timestopper_world:DoTimeStop(gethost(self.inst), time, silent)
+function TimeStopper:DoTimeStop(time, silent, nogrey)
+    TheWorld.components.timestopper_world:DoTimeStop(gethost(self.inst), time, silent, nogrey)
     self.stoppingtime = true
     gethost(self.inst):DoTaskInTime(time + 0.1, function()
         self.stoppingtime = false
