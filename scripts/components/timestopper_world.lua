@@ -328,7 +328,13 @@ end
 
 
 function TimeStopper_World:DoTimeStop(host, time, silent, nogrey)
-    self:ResumeEntity(host, time)
+    if host then
+        host:AddTag("stoppingtime")
+        host:DoTaskInTime(time + 0.1, function()
+            host:RemoveTag("stoppingtime")
+        end)    
+        self:ResumeEntity(host, time)
+    end
     -- host:AddTag("canmoveintime")
     -- if not host.components.timer:TimerExists("canmoveintime") then
     --     host.components.timer:StartTimer("canmoveintime", time + 0.1)
@@ -380,6 +386,8 @@ function TimeStopper_World:DoTimeStop(host, time, silent, nogrey)
         else
             TheWorld.components.timer:SetTimeLeft("the_world", time)
         end
+        -- TheSim:SetTimeScale(0)
+        TheWorld.net.components.clock:Stop()
         TheWorld:AddTag("the_world")
         -- if TUNING.TIMESTOPPER_GREYSCREEN and not nogrey then
         --     if time < 1 then
@@ -391,33 +399,31 @@ function TimeStopper_World:DoTimeStop(host, time, silent, nogrey)
         --         end)
         --     end
         -- end
-        if host.components.timestopper then 
-            host.components.timestopper:OnTimeStopped(silent)
-            if TheWorld.components.timer:TimerExists("twreleasing") then
-                TheWorld.components.timer:SetTimeLeft("twreleasing", time - host.components.timestopper:GetResumingTimer())
-            else
-                TheWorld.components.timer:StartTimer("twreleasing", time - host.components.timestopper:GetResumingTimer())
+        if host and host.components.timestopper then 
+            if host.components.timestopper.ontimestoppedfn then 
+                host.components.timestopper.ontimestoppedfn(silent)
             end
-            self.releasingfn = host.components.timestopper:GetOnResumingFn()
+            if TheWorld.components.timer:TimerExists("twreleasing") then
+                TheWorld.components.timer:SetTimeLeft("twreleasing", time - host.components.timestopper.onresumingtime)
+            else
+                TheWorld.components.timer:StartTimer("twreleasing", time - host.components.timestopper.onresumingtime)
+            end
+            self.releasingfn = host.components.timestopper.onresumingfn
         end
     else
-        if TheWorld.components.timer:GetTimeLeft("the_world") < time then
-            if TheWorld.components.timer:TimerExists("the_world") then
-                TheWorld.components.timer:SetTimeLeft("the_world", time)
-            else
-                TheWorld.components.timer:StartTimer("the_world", time)
-            end
-            if host.components.timestopper then 
+        if TheWorld.components.timer:TimerExists("the_world") and TheWorld.components.timer:GetTimeLeft("the_world") < time then
+            TheWorld.components.timer:SetTimeLeft("the_world", time)
+            if host and host.components.timestopper then 
                 if TheWorld.components.timer:TimerExists("twreleasing") then
-                    TheWorld.components.timer:SetTimeLeft("twreleasing", time - host.components.timestopper:GetResumingTimer())
+                    TheWorld.components.timer:SetTimeLeft("twreleasing", time - host.components.timestopper.onresumingtime)
                 else
-                    TheWorld.components.timer:StartTimer("twreleasing", time - host.components.timestopper:GetResumingTimer())
+                    TheWorld.components.timer:StartTimer("twreleasing", time - host.components.timestopper.onresumingtime)
                 end
-                self.releasingfn = host.components.timestopper:GetOnResumingFn()
+                self.releasingfn = host.components.timestopper.onresumingfn
             end
         end
-        if host.components.timestopper then 
-            host.components.timestopper:OnTimeStopped(true)
+        if host and host.components.timestopper and host.components.timestopper.ontimestoppedfn then 
+            host.components.timestopper.ontimestoppedfn(true)
         end
     end
     if not TheWorld.twlistener then
@@ -428,6 +434,13 @@ function TimeStopper_World:DoTimeStop(host, time, silent, nogrey)
                     TheWorld.twtask = nil
                 end
                 self:OnResume()
+                for k, v in pairs(AllPlayers) do
+                    if v.components.timestopper and v.components.timestopper.onresumedfn then 
+                        v.components.timestopper.onresumedfn(silent)
+                    end
+                end
+                -- TheSim:SetTimeScale(1)
+                TheWorld.net.components.clock:Resume()
                 TheWorld:DoTaskInTime(0.1, function()
                     if TheWorld:HasTag("the_world") then
                         TheWorld:RemoveTag("the_world")
@@ -450,7 +463,7 @@ function TimeStopper_World:ResumeEntity(ent, time)
     end
     if not ent.components.timer:TimerExists("canmoveintime") then
         ent.components.timer:StartTimer("canmoveintime", time + 0.1)
-    else
+    elseif ent.components.timer:GetTimeLeft("canmoveintime") < time then
         ent.components.timer:SetTimeLeft("canmoveintime", time + 0.1)
     end
     resume(ent)
@@ -514,6 +527,10 @@ function TimeStopper_World:ResumeEntity(ent, time)
         -- end
         self:ResumeEntity(ent.components.ghostlybond.ghost, time)
     end
+end
+
+function TimeStopper:OnRemoveFromEntity()
+    TheWorld:RemoveTag("the_world")
 end
 
 return TimeStopper_World

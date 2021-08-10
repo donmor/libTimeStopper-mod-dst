@@ -259,6 +259,24 @@ AddComponentPostInit("health", function(self)	-- <改写生命API
 	end
 end)	-- >
 
+AddComponentPostInit("clock", function(self)
+	self.stopped = false
+	self.Stop = function(self)
+		self.stopped = true
+	end
+	self.Resume = function(self)
+		self.stopped = false
+	end
+	local pOnUpdate = self.OnUpdate
+	self.OnUpdate = function(self, dt)
+		-- print("UPDATE")
+		if not self.stopped then
+			return pOnUpdate(self, dt)
+		end
+	end
+	
+end)	-- >
+
 AddPrefabPostInit("world", function(inst)
     if not inst.components.timer then
         inst:AddComponent("timer")
@@ -283,7 +301,21 @@ AddPrefabPostInit("beefalo", function(inst)
 end)
 
 AddPlayerPostInit(function(inst)
-	inst.instoppedtime = net_float(inst.GUID, "stopped", "instoppedtime")
+	local pOnDespawn = inst.OnDespawn
+	inst.OnDespawn = function(inst, migrationdata)
+		if inst:HasTag("time_stopped") then
+			inst:RemoveTag("time_stopped")
+		end
+		if inst:HasTag("stoppingtime") then
+			inst:RemoveTag("stoppingtime")
+		end
+		if inst:HasTag("canmoveintime") then
+			inst:RemoveTag("canmoveintime")
+		end
+		pOnDespawn(inst, migrationdata)
+	end
+	inst.instoppedtime = net_float(inst.GUID, "instoppedtime", "instoppedtime")
+	inst.globalsound = net_string(inst.GUID, "globalsound", "globalsound")
     inst:DoTaskInTime(0, function()
         -- inst:ListenForEvent("timerdone", function(inst, data)
         --     if data.name == "canmoveintime" then
@@ -322,6 +354,12 @@ AddPlayerPostInit(function(inst)
             --     end
             -- end
         end)
+        inst:ListenForEvent("globalsound", function(inst)
+			local sound = inst.globalsound and inst.globalsound:value() or nil
+			if sound then
+				TheWorld.SoundEmitter:PlaySound(sound)
+			end
+        end)
     end)
 end)
 AddPrefabPostInitAny(function(inst)
@@ -342,7 +380,7 @@ end)
 local fxp = {"raindrop","wave_shimmer","wave_shimmer_med", "wave_shimmer_deep","wave_shimmer_flood","wave_shore","impact","shatter"}
 for _,v in pairs(fxp) do 
 	AddPrefabPostInit(v, function(inst)
-		if ThePlayer and ThePlayer.instoppedtime:value() then
+		if ThePlayer and ThePlayer.instoppedtime:value() ~= 0 then
 			inst:Hide()
 		end
 	end)
@@ -359,7 +397,7 @@ for k, v in pairs(Precipitation)do
 		end
 		local function checktw(inst)
 			-- print("CHK")
-				if ThePlayer and ThePlayer.instoppedtime:value() then
+				if ThePlayer and ThePlayer.instoppedtime:value() ~= 0 then
 					vfxoff(inst)
 				else
 					vfxon(inst)

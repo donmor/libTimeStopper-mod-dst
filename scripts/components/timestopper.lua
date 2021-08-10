@@ -4,7 +4,6 @@ local TimeStopper = Class(function(self, inst)
     self.onresumingtime = 0
     self.onresumingfn = nil
     self.onresumedfn = nil
-    self.stoppingtime = false
 end,
 nil,
 {
@@ -20,15 +19,21 @@ local function gethost(inst)
 end
 
 function TimeStopper:DoTimeStop(time, silent, nogrey)
-    TheWorld.components.timestopper_world:DoTimeStop(gethost(self.inst), time, silent, nogrey)
-    self.stoppingtime = true
-    gethost(self.inst):DoTaskInTime(time + 0.1, function()
-        self.stoppingtime = false
-    end)
+    local host = gethost(self.inst)
+    TheWorld.components.timestopper_world:DoTimeStop(host, time, silent, nogrey)
+    -- host:AddTag("stoppingtime")
+    -- host:DoTaskInTime(time + 0.1, function()
+    --     host:RemoveTag("stoppingtime")
+    -- end)
 end
 
-function TimeStopper:IsStoppingTime()
-    return self.stoppingtime
+function TimeStopper:StopTimeFor(host, time, silent, nogrey)
+    TheWorld.components.timestopper_world:DoTimeStop(host, time, silent, nogrey)
+    TheWorld.components.timestopper_world:ResumeEntity(self.inst, time)
+    -- host:AddTag("stoppingtime")
+    -- host:DoTaskInTime(time + 0.1, function()
+    --     host:RemoveTag("stoppingtime")
+    -- end)
 end
 
 function TimeStopper:SetOnTimeStoppedFn(fn)
@@ -44,25 +49,8 @@ function TimeStopper:SetOnResumedFn(fn)
     self.onresumedfn = fn
 end
 
-function TimeStopper:GetOnResumingFn()
-    return self.onresumingfn
-end
-
-
-function TimeStopper:OnTimeStopped(silent)
-    if self.ontimestoppedfn then
-        self.ontimestoppedfn(silent)
-    end
-end
-
-function TimeStopper:OnResumed(silent)
-    if self.onresumedfn then
-        self.onresumedfn(silent)
-    end
-end
-
-function TimeStopper:GetResumingTimer()
-    return self.onresumingtime
-end
+-- function TimeStopper:OnRemoveFromEntity()
+--     self.inst:RemoveTag("stoppingtime")
+-- end
 
 return TimeStopper
