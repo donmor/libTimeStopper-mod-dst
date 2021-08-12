@@ -1,85 +1,77 @@
 # libTimeStopper
 
-中文 | [English](Readme.en.md)
+[中文](Readme.md) | English
 
-libTimeStopper是一个向饥荒联机版添加了时间停止系能力相关代码的支持库类MOD。
-### 主要特性
-- 基于服务器端Component的代码
-- 支持在玩家、生物、物品、随从中部署
-- 发动期间时钟停止、腐烂及燃烧暂停，生物血量归零后在时停结束瞬间才死亡
-- 投射物时停期间浮空效果
-- 时停发动、结束支持加入回调
-- 支持通过控制台触发时停
-- 在停止的时间内发动时停可以获得能够活动的时间
-- 自身可支配时间长于上一个发动者时，可以使其陷入自身的时停
-- 自带全玩家灰屏特效，可在代码中覆盖
-- 全局音效模块
-### 选项设置
-- ##### 时间停止模式
-    有关时间停止的性能选项
+A Don't Starve Together library mod providing APIs for time-stopping abilities.
+### Features
+- Code based on server-side components
+- Deployed on players, mobs, items, followers and more
+- Pause the world clock and all perishment and burning; Entities won't reach its death if HP=0, until the time resumes
+- Projectiles floats in the air during the stopped time
+- Callbacks can be added to the begining and the end of stopped time
+- Triggering time-stop via console
+- Getting able to move in stopped time by use time-stop ability
+- Trapping the previous time-stopper into stopped time by using the ability at the end of stopped time 
+- All-player grey screen effect, can be overrided
+- Global SE module
+## Options
+- ##### Time-stopping mode
+    Performance options of time-stop
     |||
     |-|-|
-    |性能模式|停止半径50范围内的实体，一般用于入门机型|
-    |普通模式|停止半径500范围内的实体，可用于大部分机型[默认]|
-    |强力模式|停止半径2000范围内的实体，适用于服务器及高端机型|
-    |极限模式|停止半径9001范围内的实体，可能卡顿严重，需谨慎考虑|
-- ##### 排除影怪
-    时间停止对暗影生物的影响，通常取决于相关MOD世界观设定等
+    |Performance mode|Stop entities in a radius of 50, usually for low-end devices|
+    |Normal mode|Stop entities in a radius of 500, for major devices[default]|
+    |Powered mode|Stop entities in a radius of 2000, usually for servers and high-end devices|
+    |Extreme mode|Stop entities in a radius of 9001, with many lags so use on your own risk|
+- ##### Ignore shadow creatures
+    Toggle how time-stop affects shadow creatures, usually depend on worldview of related mods
     |||
     |-|-|
-    |开启|理智相关类影怪（如低理智时出现的）不受时间停止影响[默认]|
-    |关闭|所有类型影怪均可被时停|
-- ##### 排除沃拓克斯
-    使沃拓克斯在任何时候不受时停影响，此选项基于沃拓克斯的官方描述
+    |Enable|Shadow creatures that affected by sanity will be ignored[default]|
+    |Disable|All shadow creatures could be time-stopped|
+- ##### Ignore Wortox
+    Make Wortox always able to move in stopped time, because he "Can hop through time and space"
     |||
     |-|-|
-    |开启|沃拓克斯不受时间停止影响|
-    |关闭|沃拓克斯可被时停[默认]|
+    |Enable|Wortox won't be stopped|
+    |Disable|Wortox could be stopped[default]|
 - ##### 目标无敌
-    时间停止时是否可以直接攻击目标，通常取决于相关MOD世界观设定等
+    Toggle whether the target could be damaged in stopped time, usually depend on worldview of related mods
     |||
     |-|-|
-    |开启|时停状态对目标无法直接造成伤害|
-    |关闭|可以在时停状态对目标造成伤害[默认]|
-- ##### 全局灰屏特效
-    时停时应用全局灰屏特效，可在代码中覆盖
+    |Enable|Make entities invincible in stopped time|
+    |Disable|Entities are not invincible in stopped time[default]|
+- ##### Global grey screen effect
+    Apply global grey screen effect, can be overrided
     |||
     |-|-|
-    |开启|时停状态玩家显示变灰[默认]|
-    |关闭|不对玩家显示进行处理|
-### 参考文档
+    |Enable|Players' screens turn grey in stopped time[default]|
+    |Disable|Make players' screens "as is"|
+## Programming references
 #### Components
 - ##### TimeStopper
-    适用对象：普通实体（玩家、生物、物品、建筑等）
+    Applicable to: normal entities (players, mobs, items, structures, etc.)
     
-    持有此Component的实体可以通过少量代码实现时间停止功能。
-    |成员变量|描述|
+    Entities with this component can perform time-stop with few codes.
+    |Field|Description|
     |-|-|
-    |`<entity>timestopper.inst`|持有此Component的实体自身|
-    |`<function>timestopper.ontimestoppedfn`|时间停止成功由此实体发动后调用的回调函数，由成员函数`SetOnTimeStoppedFn`定义，通常用于播放特效|
-    |`<number>timestopper.onresumingtime`|时间停止结束前要执行回调的提前秒数，由成员函数`SetOnResumingFn`定义|
-    |`<function>timestopper.onresumingfn`|时间停止即将结束时调用的回调函数，由成员函数`SetOnResumingFn`定义，通常用于播放特效|
-    |`<function>timestopper.onresumedfn`|时间停止结束后调用的回调函数，由成员函数`SetOnResumedFn`定义，通常用于播放特效|
-    |`<listener>timestopper.resumedlistener`|初始化Component时内部定义的监听，用于调用`onresumedfn`|
+    |`<entity>timestopper.inst`|Entity itself|
+    |`<function>timestopper.ontimestoppedfn`|Callback that is called on time-stop successfully performed by the entity, defined by method `SetOnTimeStoppedFn`, usually used on effects|
+    |`<number>timestopper.onresumingtime`|Define how many seconds before the end of time-stop will `onresumingfn` be executed, defined by method `SetOnResumingFn`|
+    |`<function>timestopper.onresumingfn`|Callback that is called a few seconds before the end of time-stop, defined by method `SetOnResumingFn`, usually used on effects|
+    |`<function>timestopper.onresumedfn`|Callback that is called on the end of time-stop, defined by method `SetOnResumedFn`, usually used on effects|
+    |`<listener>timestopper.resumedlistener`|Internal listener to call `onresumedfn`|
     
-    |成员函数|描述|
+    |Method|Description|
     |-|-|
-    |`timestopper:GetHost()`|获取此实体的主实体|
-    |`timestopper:SetHost(host)`|定义此实体的主实体|
-    |`timestopper:DoTimeStop(time, silent, nogrey)`|发动一次时间停止能力，并使主实体获得相应的可活动时间|
-    <!-- |`timestopper:StopTimeFor(time, host, silent, nogrey)`|为特定实体发动一次时间停止能力，并使其获得相应的可活动时间| -->
-    |`timestopper:SetOnTimeStoppedFn(fn)`|定义由此实体成功发动时停时执行的回调函数|
-    |`timestopper:SetOnResumingFn(time, fn)`|定义由此实体发动的时停即将结束时执行的回调函数|
-    |`timestopper:SetOnResumedFn(fn)`|定义由此实体成功发动时停时执行的回调函数|
-    |`timestopper:OnRemoveFromEntity()`|系统调用，清理`resumedlistener`|
-    ###### timestopper:GetHost()
-    获取此实体的主实体。若未通过`SetHost`定义，则检查实体是否是背包中的物品，并返回物主，否则返回实体本身。
-    ###### timestopper:SetHost(host)
-    定义此实体的主实体。
-    
-        参数 <entity>host             要与之绑定的实体。
+    |`timestopper:DoTimeStop(time, silent, nogrey)`|Perform a time-stop and make the entity able to move in stopped time for a few seconds|
+    |`timestopper:StopTimeFor(time, host, silent, nogrey)`|Perform a time-stop for a specific entity, making it able to move in stopped time for a few seconds, as well as this entity|
+    |`timestopper:SetOnTimeStoppedFn(fn)`|Define the callback that is called on time-stop successfully performed by the entity|
+    |`timestopper:SetOnResumingFn(time, fn)`|Define a callback that is called a specifit time before the end of time-stop|
+    |`timestopper:SetOnResumedFn(fn)`|Define the callback that is called on the end of time-stop|
+    |`timestopper:OnRemoveFromEntity()`|Internal call that remove the `resumedlistener`|
     ###### timestopper:DoTimeStop(time, silent, nogrey)
-    发动一次时间停止能力，向自身实体附加Tag`stoppingtime`，并获得相应的可活动时间。如果在已经停止的时间中调用此函数，则获得相应的可活动时间，如果剩余时长小于自身可活动时间，还将延长本次时停。当被实体储物栏中的物品调用时，时间停止将由物主发动。
+    Perform a time-stop, add tag `stoppingtime` to the entity，并获得相应的可活动时间。如果在已经停止的时间中调用此函数，则获得相应的可活动时间，如果剩余时长小于自身可活动时间，还将延长本次时停。当被实体储物栏中的物品调用时，时间停止将由物主发动。
     
         参数 <number>time             要停止的时间，单位为秒，必须大于0（否则报错退出）。
         参数 <bool>silent             是否静默发动时停，可以被省略。此参数将被传递到回调ontimestoppedfn及onresumingtime中，通常用于控制是否需要播放特效。当在停止的时间中调用时，此参数被true覆盖。
@@ -113,13 +105,13 @@ libTimeStopper是一个向饥荒联机版添加了时间停止系能力相关代
     适用对象：世界（服务端）
     
     此Component仅由世界实体持有，是时间停止的实际执行模块。
-    |成员变量|描述|
+    |Field|Description|
     |-|-|
-    |`<entity>timestopper_world.inst`|持有此Component的实体自身（`TheWorld`）|
+    |`<entity>timestopper_world.inst`|Entity itself (i.e. `TheWorld`)|
     |`<table>timestopper_world.twents`|时间停止过程中受影响的所有实体|
     |`<function>timestopper_world.releasingfn`|时间停止即将结束时调用的回调函数，由成员函数`DoTimeStop`传入并暂存，通常用于播放特效|
 
-    |成员函数|描述|
+    |Method|Description|
     |-|-|
     |`timestopper:OnPeriod()`|时间停止过程中被定期调用，停止可以被停止的实体并加入`twents`表中|
     |`timestopper:OnResume()`|时间停止结束时被调用，解放`twents`表中的实体|
