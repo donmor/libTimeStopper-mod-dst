@@ -11,6 +11,7 @@ SYS_INITGLOBAL()
 
 TUNING.TIMESTOPPER_PERFORMANCE = GetModConfigData("performance") or 500
 TUNING.TIMESTOPPER_IGNORE_SHADOW = GetModConfigData("ignore_shadow") or true
+TUNING.TIMESTOPPER_IGNORE_WORTOX = GetModConfigData("ignore_wortox") or false
 TUNING.TIMESTOPPER_INVINCIBLE_FOE = GetModConfigData("invincible_foe") or false
 TUNING.TIMESTOPPER_GREYSCREEN = GetModConfigData("greyscreen") or true
 
@@ -118,24 +119,28 @@ AddComponentPostInit("burnable", function(self)	-- <改写燃烧API
 	-- 		end
 	-- 	end
 	-- end
-	local function eventfn()
-				if self.task then 
-					self.taskfn = self.task.fn
-					self.taskremaining = GetTimeForTick(self.task.nexttick - GetTick())
-					if self.taskfn and self.taskremaining then 
-						self.task:Cancel()
-						self.task = nil
-					end
+		local function eventfn()
+			-- print("BURN")
+			if self.task then
+				self.taskfn = self.task.fn
+				self.taskremaining = GetTimeForTick(self.task.nexttick - GetTick())
+				-- print("REMAINING", self.taskremaining)
+				if self.taskfn and self.taskremaining then 
+					self.task:Cancel()
+					self.task = nil
 				end
-	end
+			end
+		end
 	local pExtendBurning = self.ExtendBurning
 	self.ExtendBurning = function(self)
 		if not self.twevent then 
 			self.twevent = self.inst:ListenForEvent("time_stopped", eventfn)
 			-- self.twevent = self.inst:ListenForEvent("time_stopped", function()
+				-- print("LISTENER")
+				-- eventfn(self)
 				-- if self.task then 
 				-- 	self.taskfn = self.task.fn
-				-- 	self.taskremaining = GetTimeForTick(Getself.task.nexttick - GetTick())
+				-- 	self.taskremaining = GetTimeForTick(self.task.nexttick - GetTick())
 				-- 	if self.taskfn and self.taskremaining then 
 				-- 		self.task:Cancel()
 				-- 		self.task = nil
@@ -145,8 +150,9 @@ AddComponentPostInit("burnable", function(self)	-- <改写燃烧API
 		end
 		if not self.twevent2 then 
 			self.twevent2 = self.inst:ListenForEvent("time_resumed", function()
+				-- print("RESUME", self.taskfn, self.taskremaining)
 				if not self.task and self.taskfn and self.taskremaining then
-					self.task = self.inst:DoTaskInTime(self.taskremaining > 0 and self.taskremaining or FRAMES * 3, self.taskfn, self)
+					self.task = self.inst:DoTaskInTime(self.taskremaining > 0 and self.taskremaining + FRAMES * 3 or FRAMES * 3, self.taskfn, self)
 				end
 			end)
 		end
@@ -160,7 +166,19 @@ AddComponentPostInit("burnable", function(self)	-- <改写燃烧API
 		-- self.countdown = self.burntime
 		-- self.task = self.burntime ~= nil and self.inst:DoPeriodicTask(0.1, vtick, nil, self) or nil
 	end    
-	
+	local pStartWildfire = self.StartWildfire
+	self.StartWildfire = function(self)
+		pStartWildfire(self)
+		local pfn = self.smolder_task.fn
+		self.smolder_task.fn = function(inst, self)
+			-- print(inst, "CHECK")
+			if not TheWorld:HasTag("the_world") then
+				-- print(inst, "UPDATE")
+				pfn(inst, self)
+			end
+		end
+
+	end
 end)
 
 AddComponentPostInit("childspawner", function(self)	-- <改写巢穴类API
@@ -192,72 +210,164 @@ AddComponentPostInit("combat", function(self)	-- <改写攻击API
 end)	-- >
 
 AddComponentPostInit("health", function(self)	-- <改写生命API
-	self.twtask = nil
-	local function vtick(inst, data)
-		if not data.self.inst:HasTag("time_stopped") then
-			data.self.twtask:Cancel()
-			data.self.twtask = nil
-			TheWorld:PushEvent("entity_death", { inst = data.self.inst, cause = data.cause, afflicter = data.afflicter })
-			data.self.inst:PushEvent("death", { cause = data.cause, afflicter = data.afflicter })
-            if(data.self.inst:HasTag("player")) then
-                NotifyPlayerProgress("TotalPlayersKilled", 1, data.afflicter);
+	self.UpdateStatus = function(self)
+		if self.currenthealth <= 0 then
+			TheWorld:PushEvent("entity_death", { inst = self.inst, cause = self.lastcause, afflicter = self.lastafflicter })
+			self.inst:PushEvent("death", { cause = self.lastcause, afflicter = self.lastafflicter })
+            if(self.inst:HasTag("player")) then
+                NotifyPlayerProgress("TotalPlayersKilled", 1, self.lastafflicter);
             else
-                NotifyPlayerProgress("TotalEnemiesKilled", 1, data.afflicter);
+                NotifyPlayerProgress("TotalEnemiesKilled", 1, self.lastafflicter);
             end
-        	if not data.self.nofadeout then
-				data.self.inst:AddTag("NOCLICK")
-				data.self.inst.persists = false
-				data.self.inst:DoTaskInTime(data.self.destroytime or 2, ErodeAway)
+        	if not self.nofadeout then
+				self.inst:AddTag("NOCLICK")
+				self.inst.persists = false
+				self.inst:DoTaskInTime(self.destroytime or 2, ErodeAway)
 			end
 		end
 	end
+	-- self.twtask = nil
+	-- local function vtick(inst, data)
+	-- 	if not data.self.inst:HasTag("time_stopped") then
+	-- 		data.self.twtask:Cancel()
+	-- 		data.self.twtask = nil
+	-- 		TheWorld:PushEvent("entity_death", { inst = data.self.inst, cause = data.cause, afflicter = data.afflicter })
+	-- 		data.self.inst:PushEvent("death", { cause = data.cause, afflicter = data.afflicter })
+    --         if(data.self.inst:HasTag("player")) then
+    --             NotifyPlayerProgress("TotalPlayersKilled", 1, data.afflicter);
+    --         else
+    --             NotifyPlayerProgress("TotalEnemiesKilled", 1, data.afflicter);
+    --         end
+    --     	if not data.self.nofadeout then
+	-- 			data.self.inst:AddTag("NOCLICK")
+	-- 			data.self.inst.persists = false
+	-- 			data.self.inst:DoTaskInTime(data.self.destroytime or 2, ErodeAway)
+	-- 		end
+	-- 	end
+	-- end
+	local pSetVal = self.SetVal
 	self.SetVal = function(self, val, cause, afflicter)
-		local old_health = self.currenthealth
-		local max_health = self:GetMaxWithPenalty()
-		local min_health = math.min(self.minhealth or 0, max_health)
+		if self.inst:HasTag("time_stopped") then
+			if not TUNING.TIMESTOPPER_INVINCIBLE_FOE then
+				self.lastcause = cause
+				self.lastafflicter = afflicter
+				local old_health = self.currenthealth
+				local max_health = self:GetMaxWithPenalty()
+				local min_health = math.min(self.minhealth or 0, max_health)
 
-		if val > max_health then
-			val = max_health
-		end
-
-		if val <= min_health then
-		self.currenthealth = min_health
-			self.inst:PushEvent("minhealth", { cause = cause, afflicter = afflicter })
-		else
-			self.currenthealth = val
-		end
-
-		if old_health > 0 and self.currenthealth <= 0 then
-			if self.inst:HasTag("time_stopped") then
-				self.twtask = self.inst:DoPeriodicTask(0.5, vtick, nil, { self = self, cause = cause, afflicter = afflicter })
-			else
-                --Push world event first, because the entity event may invalidate itself
-                --i.e. items that use .nofadeout and manually :Remove() on "death" event
-				TheWorld:PushEvent("entity_death", { inst = self.inst, cause = cause, afflicter = afflicter })
-				self.inst:PushEvent("death", { cause = cause, afflicter = afflicter })
-
-                --Here, check if killing player or monster
-                if(self.inst:HasTag("player")) then
-                    NotifyPlayerProgress("TotalPlayersKilled", 1, afflicter);
-                else
-                    NotifyPlayerProgress("TotalEnemiesKilled", 1, afflicter);
-                end
-
-                --V2C: If "death" handler removes ourself, then the prefab should explicitly set nofadeout = true.
-                --     Intentionally NOT using IsValid() here to hide those bugs.
-				if not self.nofadeout then
-					self.inst:AddTag("NOCLICK")
-					self.inst.persists = false
-					self.inst:DoTaskInTime(self.destroytime or 2, ErodeAway)
+				if val > max_health then
+					val = max_health
 				end
+
+				if val <= min_health then
+					self.currenthealth = min_health
+					self.inst:PushEvent("minhealth", { cause = cause, afflicter = afflicter })
+				else
+					self.currenthealth = val
+				end
+				print(cause)
+				-- if old_health > 0 and self.currenthealth <= 0 then
+					-- if self.inst:HasTag("time_stopped") then
+						-- self.twtask = self.inst:DoPeriodicTask(0.5, vtick, nil, { self = self, cause = cause, afflicter = afflicter })
+					-- else
+					--     --Push world event first, because the entity event may invalidate itself
+					--     --i.e. items that use .nofadeout and manually :Remove() on "death" event
+					-- 	TheWorld:PushEvent("entity_death", { inst = self.inst, cause = cause, afflicter = afflicter })
+					-- 	self.inst:PushEvent("death", { cause = cause, afflicter = afflicter })
+
+					--     --Here, check if killing player or monster
+					--     if(self.inst:HasTag("player")) then
+					--         NotifyPlayerProgress("TotalPlayersKilled", 1, afflicter);
+					--     else
+					--         NotifyPlayerProgress("TotalEnemiesKilled", 1, afflicter);
+					--     end
+
+					--     --V2C: If "death" handler removes ourself, then the prefab should explicitly set nofadeout = true.
+					--     --     Intentionally NOT using IsValid() here to hide those bugs.
+					-- 	if not self.nofadeout then
+					-- 		self.inst:AddTag("NOCLICK")
+					-- 		self.inst.persists = false
+					-- 		self.inst:DoTaskInTime(self.destroytime or 2, ErodeAway)
+					-- 	end
+					-- end
+				-- end
+				-- if old_health <= 0 and self.currenthealth > 0 and self.twtask ~= nil then
+				-- 	self.twtask:Cancel()
+				-- 	self.twtask = nil
+				-- end
 			end
-		end
-		if old_health <= 0 and self.currenthealth > 0 and self.twtask ~= nil then
-			self.twtask:Cancel()
-			self.twtask = nil
+		else
+			self.lastcause = cause
+			self.lastafflicter = afflicter
+			pSetVal(self, val, cause, afflicter)
 		end
 	end
+	-- local pDoFireDamage = self.DoFireDamage
+	-- self.DoFireDamage = function(self, amount, doer, instant)
+	-- 	print("FIRE", amount, doer, instant)
+	-- 	if instant or not self.inst:HasTag("time_stopped") then
+	-- 		pDoFireDamage(self, amount, doer, instant)
+	-- 	end
+	-- end
+	-- local pOnUpdate = self.OnUpdate
+	-- self.OnUpdate = function(self, dt)
+	-- 	if not self.inst:HasTag("time_stopped") then
+	-- 		pOnUpdate(self, dt)
+	-- 	end
+	-- end
 end)	-- >
+
+AddComponentPostInit("disappears", function(self)
+	local function eventfn()
+		if self.disappeartask then
+			self.taskfn = self.disappeartask.fn
+			self.taskremaining = GetTimeForTick(self.disappeartask.nexttick - GetTick())
+			if self.taskfn and self.taskremaining then 
+				self.disappeartask:Cancel()
+				self.disappeartask = nil
+			end
+		end
+	end
+	local pPrepareDisappear = self.PrepareDisappear
+	self.PrepareDisappear = function(self)
+		if not self.twevent then 
+			self.twevent = self.inst:ListenForEvent("time_stopped", eventfn)
+		end
+		if not self.twevent2 then 
+			self.twevent2 = self.inst:ListenForEvent("time_resumed", function()
+				if not self.disappeartask and self.taskfn and self.taskremaining then
+					self.disappeartask = self.inst:DoTaskInTime(self.taskremaining > 0 and self.taskremaining + FRAMES * 3 or FRAMES * 3, self.taskfn, self)
+				end
+			end)
+		end
+		pPrepareDisappear(self)
+		if self.inst:HasTag("time_stopped") then
+			self.inst:DoTaskInTime(FRAMES, eventfn)
+		end
+	end
+end)
+
+-- AddComponentPostInit("workable", function(self)
+-- 	local pWorkedBy = self.WorkedBy
+-- 	self.WorkedBy = function(self, worker, numworks)
+-- 		return pWorkedBy(self, worker, numworks)
+-- 	end
+-- end)
+
+AddComponentPostInit("perishable", function(self)
+	local pStartPerishing = self.StartPerishing
+	self.StartPerishing = function(self)
+		pStartPerishing(self)
+		local pfn = self.updatetask.fn
+		self.updatetask.fn = function(inst, dt)
+			-- print(inst, "CHECK")
+			if not TheWorld:HasTag("the_world") then
+				-- print(inst, "UPDATE")
+				pfn(inst, dt)
+			end
+		end
+	end
+end)
 
 AddComponentPostInit("clock", function(self)
 	self.stopped = false
@@ -278,6 +388,9 @@ AddComponentPostInit("clock", function(self)
 end)	-- >
 
 AddPrefabPostInit("world", function(inst)
+	if not TheWorld.ismastersim then
+		return
+	end
     if not inst.components.timer then
         inst:AddComponent("timer")
     end
@@ -288,8 +401,11 @@ end)
 
 -- 时停可刮牛毛
 AddPrefabPostInit("beefalo", function(inst)
+	if not TheWorld.ismastersim then
+		return
+	end
     if inst.components.beard then
-        local old_can = inst.components.beard.canshavetest
+		local old_can = inst.components.beard.canshavetest
         inst.components.beard.canshavetest = function(inst, ...)
             if TheWorld:HasTag("the_world") then
                 return true
@@ -300,7 +416,27 @@ AddPrefabPostInit("beefalo", function(inst)
     end
 end)
 
+-- AddPrefabPostInit("moon_tree_blossom_worldgen", function(inst)
+-- 	inst:AddTag("perishable_worldgen")
+-- 	if not TheWorld.ismastersim then
+-- 		return
+-- 	end
+-- 	local pOnPickup = inst.components.inventoryitem.onpickupfn
+-- 	inst.components.inventoryitem:SetOnPickupFn(function(inst, pickupguy, src_pos)
+-- 		inst:RemoveTag("perishable_worldgen")
+-- 		return pOnPickup(inst, pickupguy, src_pos)
+-- 	end)
+-- end)
+
+-- AddPrefabPostInit("wobster_sheller_land", function(inst)
+-- 	inst:AddTag("small_livestock")
+-- end)
+
 AddPlayerPostInit(function(inst)
+	if inst.prefab == "wortox" and TUNING.TIMESTOPPER_IGNORE_WORTOX then
+		inst:AddTag("timemaster")
+		inst:AddTag("canmoveintime")
+	end
 	local pOnDespawn = inst.OnDespawn
 	inst.OnDespawn = function(inst, migrationdata)
 		if inst:HasTag("time_stopped") then
@@ -309,7 +445,7 @@ AddPlayerPostInit(function(inst)
 		if inst:HasTag("stoppingtime") then
 			inst:RemoveTag("stoppingtime")
 		end
-		if inst:HasTag("canmoveintime") then
+		if inst:HasTag("canmoveintime") and not inst:HasTag("timemaster") then
 			inst:RemoveTag("canmoveintime")
 		end
 		pOnDespawn(inst, migrationdata)
@@ -332,12 +468,16 @@ AddPlayerPostInit(function(inst)
 						TheWorld:PushEvent("overridecolourcube", "images/colour_cubes/ghost_cc.tex")
 					else
 						TheWorld:PushEvent("overridecolourcube", "images/colour_cubes/mole_vision_on_cc.tex")
-						TheWorld:DoTaskInTime(0.5, function()
+						TheWorld.grey_task = TheWorld:DoTaskInTime(0.25, function()
 							TheWorld:PushEvent("overridecolourcube", "images/colour_cubes/ghost_cc.tex")
 						end)
 					end
 				elseif time and time == 0 then
 					TheWorld:PushEvent("overridecolourcube", nil)
+					if TheWorld.grey_task then
+						TheWorld.grey_task:Cancel()
+						TheWorld.grey_task = nil
+					end
 				end	
 				local x, y, z = inst.Transform:GetWorldPosition()
 				local ents = TheSim:FindEntities(x, y, z, 1, { "FX" })
@@ -363,18 +503,34 @@ AddPlayerPostInit(function(inst)
     end)
 end)
 AddPrefabPostInitAny(function(inst)
+	if not TheWorld.ismastersim then
+		return
+	end
+    inst:DoTaskInTime(0, function()
+		inst:ListenForEvent("timerdone", function(inst, data)
+			if data.name == "canmoveintime" and inst:HasTag("canmoveintime") and not inst:HasTag("timemaster") then
+				inst:RemoveTag("canmoveintime")
+			end
+			if data.name == "stoppingtime" then
+				if inst:HasTag("stoppingtime") then
+            		inst:RemoveTag("stoppingtime")
+				end
+			end
+		end)
+		inst:ListenForEvent("death", function(inst)
+			if inst:HasTag("canmoveintime") and not inst:HasTag("timemaster") then
+				inst:RemoveTag("canmoveintime")
+			end
+		end)
+    end)
     if not inst.components.timer then
         inst:AddComponent("timer")
     end
-    inst:DoTaskInTime(0, function()
-        inst:ListenForEvent("timerdone", function(inst, data)
-            if data.name == "canmoveintime" then
-                if inst:HasTag("canmoveintime") then
-                    inst:RemoveTag("canmoveintime")
-                end
-            end
-        end)
-    end)
+	-- inst:ListenForEvent("the_world_end", function(inst)
+	-- 	if inst.components.timestopper and inst.components.timestopper.onresumedfn then 
+	-- 		inst.components.timestopper.onresumedfn(silent)
+	-- 	end
+	-- end, TheWorld)
 end)
 
 local fxp = {"raindrop","wave_shimmer","wave_shimmer_med", "wave_shimmer_deep","wave_shimmer_flood","wave_shore","impact","shatter"}

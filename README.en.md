@@ -35,7 +35,7 @@ A Don't Starve Together library mod providing APIs for time-stopping abilities.
     |-|-|
     |Enable|Wortox won't be stopped|
     |Disable|Wortox could be stopped[default]|
-- ##### 目标无敌
+- ##### Invincible foe
     Toggle whether the target could be damaged in stopped time, usually depend on worldview of related mods
     |||
     |-|-|
@@ -57,144 +57,150 @@ A Don't Starve Together library mod providing APIs for time-stopping abilities.
     |-|-|
     |`<entity>timestopper.inst`|Entity itself|
     |`<function>timestopper.ontimestoppedfn`|Callback that is called on time-stop successfully performed by the entity, defined by method `SetOnTimeStoppedFn`, usually used on effects|
-    |`<number>timestopper.onresumingtime`|Define how many seconds before the end of time-stop will `onresumingfn` be executed, defined by method `SetOnResumingFn`|
+    |`<number>timestopper.onresumingtime`|Indicates how many seconds before the end of time-stop will `onresumingfn` be executed, defined by method `SetOnResumingFn`|
     |`<function>timestopper.onresumingfn`|Callback that is called a few seconds before the end of time-stop, defined by method `SetOnResumingFn`, usually used on effects|
     |`<function>timestopper.onresumedfn`|Callback that is called on the end of time-stop, defined by method `SetOnResumedFn`, usually used on effects|
     |`<listener>timestopper.resumedlistener`|Internal listener to call `onresumedfn`|
     
     |Method|Description|
     |-|-|
-    |`timestopper:DoTimeStop(time, silent, nogrey)`|Perform a time-stop and make the entity able to move in stopped time for a few seconds|
-    |`timestopper:StopTimeFor(time, host, silent, nogrey)`|Perform a time-stop for a specific entity, making it able to move in stopped time for a few seconds, as well as this entity|
-    |`timestopper:SetOnTimeStoppedFn(fn)`|Define the callback that is called on time-stop successfully performed by the entity|
+    |`timestopper:GetHost()`|Get the master entity of this entity|
+    |`timestopper:SetHost(host)`|Define the master entity of this entity|
+    |`timestopper:DoTimeStop(time, silent, nogrey)`|Perform a time-stop and make the master entity able to move in stopped time for a few seconds|
+    |`timestopper:SetOnTimeStoppedFn(fn)`|Define a callback that is called on time-stop successfully performed by the entity|
     |`timestopper:SetOnResumingFn(time, fn)`|Define a callback that is called a specifit time before the end of time-stop|
-    |`timestopper:SetOnResumedFn(fn)`|Define the callback that is called on the end of time-stop|
-    |`timestopper:OnRemoveFromEntity()`|Internal call that remove the `resumedlistener`|
+    |`timestopper:SetOnResumedFn(fn)`|Define a callback that is called on the end of time-stop|
+    |`timestopper:OnRemoveFromEntity()`|Internal call that removes `resumedlistener`|
+    ###### timestopper:GetHost()
+    Get the master entity of this entity. Return the entity itself if not defined.
+    ###### timestopper:SetHost(host)
+    Define the master entity of this entity.
+    
+        Parameter <entity>host                        The entity to be bound with. 
     ###### timestopper:DoTimeStop(time, silent, nogrey)
-    Perform a time-stop, add tag `stoppingtime` to the entity，并获得相应的可活动时间。如果在已经停止的时间中调用此函数，则获得相应的可活动时间，如果剩余时长小于自身可活动时间，还将延长本次时停。当被实体储物栏中的物品调用时，时间停止将由物主发动。
+    Perform a time-stop for `time` seconds, tag it with `stoppingtime` to the master entity, and make it able to move in stopped time for `time` seconds. If called in stopped time, the entity will be able to move in stopped time for `time` seconds, and the stopped time will be extended if `time` is greater than remaining. The entity itsell will also able to move if the master entity is other than itself.
     
-        参数 <number>time             要停止的时间，单位为秒，必须大于0（否则报错退出）。
-        参数 <bool>silent             是否静默发动时停，可以被省略。此参数将被传递到回调ontimestoppedfn及onresumingtime中，通常用于控制是否需要播放特效。当在停止的时间中调用时，此参数被true覆盖。
-        参数 <bool>nogrey             是否忽略内置灰屏特效，可以被省略。当在停止的时间中调用时忽略此参数。
-    ###### timestopper:StopTimeFor(time, host, silent, nogrey)
-    发动一次时间停止能力，向某实体附加Tag`stoppingtime`，并获得相应的可活动时间；自身实体亦获得相等的可活动时间。此函数通常用于随从生物。如果在已经停止的时间中调用此函数，则获得相应的可活动时间，如果剩余时长小于自身可活动时间，还将延长本次时停。
-    
-        参数 <number>time             要停止的时间，单位为秒，必须大于0（否则没有任何效果）。
-        参数 <entity>host             要停止时间的实体。如果省略，则相当于执行DoTimeStop。
-        参数 <bool>silent             是否静默发动时停，可以被省略。此参数将被传递到回调ontimestoppedfn及onresumingtime中，通常用于控制是否需要播放特效。当在停止的时间中调用时，此参数被true覆盖。
-        参数 <bool>nogrey             是否忽略内置灰屏特效，可以被省略。当在停止的时间中调用时忽略此参数。
+        Parameter <number>time                        The period of time (seconds) to stop, must greater than 0, otherwise nothing will be done.
+        Parameter <bool>silent                        Define whether time-stop should be performed silently, may be ignored. This will be passed to callback `ontimestoppedfn` and `onresumingtime`, usually used on effects.
+        Parameter <bool>nogrey                        Define whether the initial grey-screen should be disabled, may be ignored. Ignored if called in stopped time.
     ###### timestopper:SetOnTimeStoppedFn(fn)
-    定义由此实体成功发动时停时执行的回调函数。此函数通常用于播放特效。
+    Define a callback that is called on time-stop successfully performed by the entity. This callback is usually used on effects.
     
-        参数 <function(silent)>fn     要执行的回调函数。
-            参数 <bool>silent             是否静默发动。该参数自DoTimeStop传入，通常用于判断此次是否需要播放特效。
+        Parameter <function(silent)>fn                The callback function.
+            Parameter <bool>silent                        Indicates whether the time-stop is performed silently. This parameter comes from `DoTimeStop`, usually used to decide if the effect should be shown. Overrided by true if called in stopped time.
     ###### timestopper:SetOnResumingFn(time, fn)
-    定义由此实体发动的时停即将结束时执行的回调函数。此函数通常用于播放特效。
+    Define a callback that is called `time` seconds before the end of time-stop. This callback is usually used on effects.
     
-        参数 <number>time             定义在时停结束前多少秒执行回调。省略则和SetOnResumedFn定义的回调一同执行；为负则在时停结束数秒后执行。
-        参数 <function(silent)>fn     要执行的回调函数。此函数将被TimeStopper_World暂存，并可被另一持有TimeStopper的实体覆盖。
-            参数 <bool>silent             是否静默发动。该参数自DoTimeStop传入，通常用于判断此次是否需要播放特效。
+        Parameter <number>time                        Define how many seconds before the end of time-stop will `onresumingfn` be executed. If ignored, the callback will be called along with `timestopper.onresumedfn`. Could be negative if a function should be called `time` seconds after time-stop.
+        Parameter <function()>fn                The callback function. It will be preserved in `TimeStopper_World`, and could be overrided by another entity with `TimeStopper`.
     ###### timestopper:SetOnResumedFn(fn)
-    定义时间停止结束后调用的回调函数。此回调函数将在所有持有`TimeStopper`的实体调用，通常用于播放特效。
+    Define a callback that is called on the end of time-stop. This callback will be call on all entities with `TimeStopper`, and is usually used on effects.
     
-        参数 <function(silent)>fn     要执行的回调函数。
-            参数 <bool>silent             是否静默发动。该参数自DoTimeStop传入，通常用于判断此次是否需要播放特效。
+        Parameter <function()>fn                The callback function. 
     ###### timestopper:OnRemoveFromEntity()
-    系统调用，清理`resumedlistener`。一般不应被任何第三方代码调用。
+    Internal call that removes `resumedlistener`. Must not be called by any 3rd-party code.
 - ##### TimeStopper_World
-    适用对象：世界（服务端）
+    Applicable to : Worlds (server side)
     
-    此Component仅由世界实体持有，是时间停止的实际执行模块。
+    This component is only used with world entities. It is the actual performer of time-stop.
     |Field|Description|
     |-|-|
     |`<entity>timestopper_world.inst`|Entity itself (i.e. `TheWorld`)|
-    |`<table>timestopper_world.twents`|时间停止过程中受影响的所有实体|
-    |`<function>timestopper_world.releasingfn`|时间停止即将结束时调用的回调函数，由成员函数`DoTimeStop`传入并暂存，通常用于播放特效|
+    |`<table>timestopper_world.twents`|All entities affected in current time-stop|
+    |`<function>timestopper_world.releasingfn`|Callback that is called a few seconds before the end of time-stop, preserved in method `DoTimeStop`, usually used on effects|
 
     |Method|Description|
     |-|-|
-    |`timestopper:OnPeriod()`|时间停止过程中被定期调用，停止可以被停止的实体并加入`twents`表中|
-    |`timestopper:OnResume()`|时间停止结束时被调用，解放`twents`表中的实体|
-    |`timestopper:DoTimeStop(time, host, silent, nogrey)`|将世界的时间停止一段时间，并使指定实体获得相应的可活动时间|
-    |`timestopper:ResumeEntity(ent, time)`|立即释放指定实体并使其获得相应的可活动时间|
-    |`timestopper:OnRemoveFromEntity()`|系统调用，清理世界实体的Tag|
-    ###### timestopper:OnPeriod()
-    时间停止过程中被定期调用，以每个玩家为中心，发现世界中满足条件的实体，停止其关键功能，附加Tag`time_stopped`并加入`twents`表中。一般不应被此Component以外的代码调用。
+    |`timestopper_world:OnPeriod()`|Periodically called during the stopped time, find and stop entities and add them to `twents`|
+    |`timestopper_world:OnResume()`|Called on the end of stopped time, release all entities in `twents`|
+    |`timestopper_world:DoTimeStop(time, host, silent, nogrey)`|Stop the time for a period, and make the entity able to move in stopped time|
+    |`timestopper_world:ResumeEntity(ent, time)`|Release a specific entity immediately, and make it able to move in stopped time|
+    |`timestopper_world:BreakTimeStop()`|Immediately resume the stopped world|
+    |`timestopper_world:BreakMovability(ent)`|Make an entity no longer able to move|
+    |`timestopper_world:OnRemoveFromEntity()`|Internal call that removes tags on world entities|
+    ###### timestopper_world:OnPeriod()
+    Periodically called during the stopped time, take each player as the center to find entities ready to be stopped, pause its critical functions, tag it with `time_stopped` and append it to `twents`. Usually not called outside this component.
 
-    以下实体不会被停止：
-    - 带有Tag`wall`的实体
-    - 已经被停止并附加Tag`time_stopped`的实体
-    - 被附加Tag`canmoveintime`的实体（通常被赋予有限的行动时间）
-    - 带有Tag`INLIMBO`的实体
-    - 可以行动的温蒂对应的阿比盖尔
-    - 受理智影响的暗影生物（可在配置中关闭此项）
-    ###### timestopper:OnResume()
-    时间停止结束时被调用，以每个玩家为中心，解放`twents`表中的所有实体，移除Tag`time_stopped`。一般不应被此Component以外的代码调用。
-    ###### timestopper:DoTimeStop(time, host, silent, nogrey)
-    将世界的时间停止一段时间，向指定实体附加Tag`stoppingtime`和`canmoveintime`，使其获得相应的可活动时间。在此期间，世界实体将被附加Tag`the_world`，时钟停止运行。如果在静止的时间内调用，则将剩余时长延长到指定时间（如果更长），并释放指定实体。
+    The entity will not be stopped if:
+    - Having a tag `wall`
+    - Having a tag `time_stopped` and has been stopped
+    - Having a tag `canmoveintime` (Usually in a limited period)
+    - Having a tag `INLIMBO`
+    - Is Abigail along with a movable Wendy player
+    - Shadow creatures appeared under a low sanity (can be disabled in options)
+    ###### timestopper_world:OnResume()
+    Called on the end of stopped time, release all entities in `twents`, remove their tag `time_stopped`. Usually not called outside this component.
+    ###### timestopper_world:DoTimeStop(time, host, silent, nogrey)
+    Stop the time for `time` seconds, tag it with `stoppingtime` and `canmoveintime` to `host`, making it able to move in stopped time. During the stopped time, the world entities will have a tag `the_world`, the world clock will be paused. If called in stopped time, the remaining time will be extended to `time` if latter is longer, and `host` will be released. If a master entity other than itself was defined, it'll also be made able to move, as well as the tags.
 
-        参数 <number>time             要停止的时间，单位为秒，必须大于0（否则没有任何效果）。
-        参数 <entity>host             要赋予可活动时间的实体。如果省略则不赋予任何实体可活动时间。
-        参数 <bool>silent             是否静默发动时停，可以被省略。此参数将被传递到回调中，通常用于控制是否需要播放特效。当在停止的时间中调用时，此参数被true覆盖。
-        参数 <bool>nogrey             是否忽略内置灰屏特效，可以被省略。当在停止的时间中调用时忽略此参数。
-    ###### timestopper:ResumeEntity(ent, time)
-    立即释放指定实体，附加Tag`canmoveintime`并使其获得相应的可活动时间，温蒂玩家的阿比盖尔也会被一同释放。注意此函数不会向实体附加Tag`stoppingtime`。
+        Parameter <number>time                        The period of time (seconds) to stop, must non-zero, otherwise nothing will be done. Pass a negative value to stop the world for unlimited time.
+        Parameter <entity>host                        The entity to be tagged and made able to move. If ignored, no entity will be made movable
+        Parameter <bool>silent                        Define whether time-stop should be performed silently, may be ignored. This will be passed to callbacks, usually used on effects. Overrided by true if called in stopped time.
+        Parameter <bool>nogrey                        Define whether the initial grey-screen should be disabled, may be ignored. Ignored if called in stopped time.
+    ###### timestopper_world:ResumeEntity(ent, time)
+    Release `ent` immediately, tag it with `canmoveintime`, and make it able to move in stopped time for `time` seconds. Abigail will be also released if along with `ent` that is a Wendy player. Note that this will not tag `ent` with `stoppingtime`.
 
-        参数 <entity>ent              要赋予可活动时间的实体，必须不为nil并可用（否则没有任何效果）。
-        参数 <number>time             要赋予的可活动时间，单位为秒，必须大于0（否则没有任何效果）。
-    ###### timestopper:OnRemoveFromEntity()
-    系统调用，清理世界实体的Tag。一般不应被任何第三方代码调用。
+        Parameter <entity>ent                         Entity to be made able to move in stopped time. Must not be `nil` and is valid or nothing will happen.
+        Parameter <number>time                        The period of time (seconds) during which `ent` is movable. Must non-zero or nothing will happen. Pass anegative value to give it unlimited movable time.
+    ###### timestopper_world:BreakTimeStop()
+    Immediately resume the stopped world. Used especially if passed a negative `time` to `DoTimeStop`.
+    ###### timestopper_world:BreakMovability(ent)
+    Make an entity no longer able to move in stopped time. Used especially if passed a negative `time` to `DoTimeStop` or `ResumeEntity`.
+
+        Parameter <entity>ent                         Entity to be made no longer able to move in stopped time. Must not be `nil` and is valid or nothing will happen.
+    ###### timestopper_world:OnRemoveFromEntity()
+    Internal call that removes tags on world entities. Must not be called by any 3rd-party code.
 #### Netvars
 - ##### <net_float>instoppedtime
-    宿主：全体玩家实体
+    Host: All player entities
 
-    事件：`instoppedtime`
+    Event: `instoppedtime`
 
-    用于在时停发动及结束时向所有玩家推送相关数据。发动时被赋予一个非0的值，其绝对值等于时停发动时指定的长度，若指定了nogrey，则符号为负；结束时被赋0。默认用于实现灰屏特效。
+    Used to push data to all players on enter or leave the stopped time.
 - ##### <net_string>globalsound
-    宿主：全体玩家实体
+    Host: All player entities
 
-    事件：`globalsound`
+    Event: `globalsound`
 
-    用于向全体玩家推送一段音效。此音效将以世界（客户端）为宿主播放。
+    Used to push sound effects to all player. The SE will be player by the world entity (client side)
 #### Events
 - ##### instoppedtime
-    当进入或退出静滞时间时触发，默认用于灰屏特效及天气粒子控制。
+    Triggered on enter or leave the stopped time, initially used to control grey-screen and weather effects. May also be listened manually.
 
-        触发 TimeStopper_World        当进入或退出静滞时间时，在每个玩家实体通过为Netvar赋值触发此事件。
-        监听 全体玩家实体(客户端)      被触发时将读取同名Netvar的值，若为正值并使显示反色，0.5秒后视野变灰；不足0.5则只使视野变灰；若为0则使视野恢复原状。此外还将向天气实体（客户端）推送同名事件。
-        监听 所有天气实体(客户端)      被触发时将读取同名Netvar的值，若为非0值则使天气粒子呈现静滞状态，否则将其恢复正常。
+        Pusher   TimeStopper_World                    Triggered by setting the value of netvar with the same name for each player on enter or leave the stopped time.
+        Pusher   All player entities (client side)    Triggered on all weather entities by player if an event with the same name is triggered on the player.
+        Listener All player entities (client side)    If triggered, the netvar with the same name will be fetched. if it is positive, the color of the display will be reversed and then greyed out in 0.25s, or just greyed out if less than a second; the display will be set to normal if the value is 0. An event with the same name will be pushed to all weather entities.
+        Listener All weather entities (client side)   If triggered, the netvar with the same name will be fetched. if it is a non-zero value, the weather particles will be freezed, otherwise they'll be released.
 - ##### globalsound
-    通过为Netvar赋值手动触发，向玩家推送一段音效。
+    Manually triggered by setting the value of netvar with the same name, and push sound effects to the player. Note that the value must be different than before in order to trigger the event. A solution is to call `globalsound:set_local("")` 0.1s later on the server side.
 
-        监听 全体玩家实体(客户端)      被触发时将读取同名Netvar的值，并以世界（客户端）为宿主播放。
+        Listener All player entities (client side)    If triggered, the netvar with the same name will be fetched. The name of the SE will be passed to the sound emitter of the world entity (client side) and be played.
 - ##### time_stopped
-    当实体被停止时触发，用于控制可燃物燃烧状态，也可手动监听。
+    Triggered on an entity being stopped, initially used to control the status of burnable entities. May also be listened manually.
 
-        触发 TimeStopper_World        当燃烧中的实体被找到并停止时对其触发此事件。
-        监听 正在燃烧的实体            被触发时停止并锁存燃尽倒计时器。
+        Pusher   TimeStopper_World                    Triggered on an entity being found and stopped.
+        Listener All burning entities                 If triggered, the burn out countdown will be stopped and preserved .
 - ##### time_resumed
-    当实体被释放时触发，用于控制可燃物燃烧状态，也可手动监听。
+    Triggered on an entity being released, initially used to control the status of burnable entities. May also be listened manually.
 
-        触发 TimeStopper_World        当twents表中的实体被释放时对其触发此事件。
-        监听 正在燃烧的实体            被触发时使用锁存的回调和剩余时间启动燃尽倒计时器。
+        Pusher   TimeStopper_World                    Triggered on an entity in `twents` being released.
+        Listener All burning entities                 If triggered, A burn out countdown will be set up using preserved data.
 - ##### the_world
-    当世界进入静滞时间时触发，可手动监听。
+    Triggered if the world enter the stopped state. May be listened manually.
+        Pusher   TimeStopper_World                    Triggered on the world entities (server side) if `timestopper_world:DoTimeStop` is called.
+- ##### the_world_end
+    Triggered if the world leave the stopped state. May be listened manually.
 
-        触发 TimeStopper_World        当执行timestopper_world:DoTimeStop时在世界实体（服务端）触发此事件。
-- ##### the_world
-    当世界进入静滞时间时触发，可手动监听。
-
-        触发 TimeStopper_World        当时间停止结束时在世界实体（服务端）触发此事件。
-        监听 所有持有TimeStopper的实体 被触发时调用回调函数onresumedfn。
+        Pusher   TimeStopper_World                    Triggered on th world entities (server side) if the stopped time is released.
+        Listener All entities with TimeStopper        Call `onresumedfn` if triggered。
 #### Tags
 - ###### time_stopped
-    由`TimeStopper_World`附加在停止的实体上，标示实体处于被时停的状态。当释放实体时被移除。
+    Tagged to a stopped entity by `TimeStopper_World`, indicating that the entity has been stopped. Removed if the entity is released.
 - ###### the_world
-    由`TimeStopper_World`附加在世界实体（服务端）上，标示世界处于被时停的状态。当时间停止结束时被移除。
+    Tagged to the world entities (server side) by `TimeStopper_World`, indicating that the world has been stopped. Removed if the stopped time is over.
 - ###### canmoveintime
-    执行`timestopper_world:ResumeEntity`时附加在指定实体上，标示此实体当前不受时停影响。当其可活动时间用尽时被移除，若此时仍处于静滞时间中，实体将在下一次执行`OnPeriod`时被停止。
+    Tagged to a specific entity on calling `timestopper_world:ResumeEntity`, indicating that the entity won't be affected by time-stop. Removed if the entity ran out of its movable time, and it will be stopped on the next `OnPeriod` call, if still in the stopped time.
 - ###### timemaster
-    对持有此Tag的实体，`TimeStopper_World`将不会对其附加或移除`canmoveintime`。此Tag通常与`canmoveintime`一起加入Prefab中，以创建永远不受影响的实体，如具有特殊设定的生物、道具，或者用于时间停止的特效等。
+    Entities with this will never be attached or removed with the `canmoveintime` tag. Usually used along with `canmoveintime` in prefabs, in order to create entities that can never be stopped, such as characters or items with special power, or effects used in stopped time.
 - ###### stoppingtime
-    执行`timestopper_world:DoTimeStop`时附加在指定实体上，标示此实体请求了一次时间停止。当其请求的时间用尽时被移除。注意`timestopper_world:DoTimeStop`中会执行一次`timestopper_world:ResumeEntity`，所以会同时附加两个Tag，而只执行`timestopper_world:ResumeEntity`不会附加`stoppingtime`。这是为了区分主动停止时间和被施加时停无效保护的情况，当撤除保护时应同时检查这两个Tag。
+    Tagged to a specific entity on calling `timestopper_world:DoTimeStop`, indicating that the entity acquired a time-stop. Removed if ran out the required time. Note that `timestopper_world:DoTimeStop` calls `timestopper_world:ResumeEntity` for one time, so it tags the entity with all the two tags, but `stoppingtime` won't be tagged on the entity on calling `timestopper_world:ResumeEntity`. This is used to separate these situations: Stopping time use itself's ability, or be protected from being stopped. Chech both the two tags on removing the protection.

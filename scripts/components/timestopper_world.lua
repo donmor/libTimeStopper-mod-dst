@@ -1,5 +1,5 @@
 local function IsInTable(tbl, value)
-	for k, v in ipairs(tbl) do
+	for k, v in pairs(tbl) do
 		if v == value then
 			return true;
 		end
@@ -46,7 +46,7 @@ local function freeze(ent)
                 end
                 local function projspeedfn()
                     projcomp.speed = projcomp.speed - mult * ospeed / 3
-                    if projcomp.speed < 0 or projcomp.target and projcomp.hitdist + projcomp.target:GetPhysicsRadius(0) >= getdist(ent, projcomp.target) then   -- TODO: TESTING
+                    if projcomp.speed < 0 or projcomp.target and projcomp.hitdist + projcomp.target:GetPhysicsRadius(0) >= getdist(ent, projcomp.target) then
                         projcomp.speed = 0
                     end
                     ent.Physics:SetMotorVel(projcomp.speed, 0, 0)
@@ -83,19 +83,29 @@ local function freeze(ent)
         if ent.sg then
             ent.sg:Stop()
         end
-        if ent.components.combat then
-            ent.components.combat:SetTarget(nil)
-        end
+        -- if ent.components.combat then
+        --     ent.components.combat:SetTarget(nil)
+        -- end
         if ent.components.locomotor then
             ent.components.locomotor:StopUpdatingInternal()
         end
+        if ent.components.propagator then
+            ent.components.propagator:StopUpdating()
+        end
+        -- if ent.components.perishable and not ent:HasTag("small_livestock") and ent.prefab ~= "wobster_sheller_land" then
+        --     ent.components.perishable:StopPerishing()
+        -- end
         if ent.components.playercontroller then
             ent.components.playercontroller:Enable(false)
         end
-        if TUNING.TIMESTOPPER_INVINCIBLE_FOE and ent.components.health then
-            ent.components.health:SetInvincible(true)
-        end
+        -- if TUNING.TIMESTOPPER_INVINCIBLE_FOE and ent.components.health then
+        --     ent.components.health:SetInvincible(true)
+        -- end
     end
+    if not ent:HasTag("time_stopped") then
+        ent:AddTag("time_stopped")
+    end
+
 end
 
 local function resume(ent)
@@ -142,15 +152,24 @@ local function resume(ent)
         if ent.components.locomotor then
             ent.components.locomotor:StartUpdatingInternal()
         end
+        if ent.components.propagator then
+            ent.components.propagator:StartUpdating()
+        end
+        -- if ent.components.perishable and not ent:HasTag("small_livestock") and ent.prefab ~= "wobster_sheller_land" then
+        --     ent.components.perishable:StartPerishing()
+        -- end
         if ent.components.playercontroller then
             ent.components.playercontroller:Enable(true)
         end
-        if ent:HasTag("time_stopped") then
-            ent:RemoveTag("time_stopped")
+        if ent.components.health then
+            ent.components.health:UpdateStatus()
         end
-        if TUNING.TIMESTOPPER_INVINCIBLE_FOE then
-            ent.components.health:SetInvincible(false)
-        end
+        -- if TUNING.TIMESTOPPER_INVINCIBLE_FOE then
+        --     ent.components.health:SetInvincible(false)
+        -- end
+    end
+    if ent:HasTag("time_stopped") then
+        ent:RemoveTag("time_stopped")
     end
 end
 
@@ -159,7 +178,8 @@ function TimeStopper_World:OnPeriod()
         local x0, y0, z0 = v.Transform:GetWorldPosition()
         for k, v in pairs(TheSim:FindEntities(x0, y0, z0, TUNING.TIMESTOPPER_PERFORMANCE, nil, {"wall", "INLIMBO", "time_stopped", "canmoveintime"})) do
             if v and v:IsValid() and
-                    not (v.prefab == "abigail" and v.components.follower:GetLeader():HasTag("canmoveintime")) and
+                    not (v:HasTag("ghostlyelixirable") and v.components.follower and
+                    v.components.follower:GetLeader() and v.components.follower:GetLeader():HasTag("canmoveintime")) and
                     not (TUNING.TIMESTOPPER_IGNORE_SHADOW and
                     (v:HasTag("shadowcreature") or
                     string.find(v.prefab or "", "shadowhand") == 1 or
@@ -240,11 +260,8 @@ function TimeStopper_World:OnPeriod()
                 --     end
                 -- end
                 freeze(v)
-                if not v:HasTag("time_stopped") then
-                    v:AddTag("time_stopped")
-                    v:PushEvent("time_stopped")
-                end
-                if not IsInTable(v, self.twents) then
+                v:PushEvent("time_stopped")
+                if not IsInTable(self.twents, v) then
                     table.insert(self.twents, v)
                 end
             end
@@ -317,24 +334,59 @@ function TimeStopper_World:OnResume()
             --     end
             -- end
             resume(v)
-            if v:HasTag("time_stopped") then
-                v:RemoveTag("time_stopped")
-                v:PushEvent("time_resumed")
-            end
+            -- if v:HasTag("time_stopped") then
+            --     v:RemoveTag("time_stopped")
+            -- end
+            v:PushEvent("time_resumed")
         end
     end
     self.twents = {}
 end
 
 
-function TimeStopper_World:DoTimeStop(host, time, silent, nogrey)
-    if host then
-        host:AddTag("stoppingtime")
-        host:DoTaskInTime(time + 0.1, function()
-            host:RemoveTag("stoppingtime")
-        end)    
-        self:ResumeEntity(host, time)
+function TimeStopper_World:DoTimeStop(time, host, silent, nogrey)
+    if time == 0 then
+        return
     end
+    local function makestopping(ent)
+        if ent and ent:IsValid() then
+            -- host:DoTaskInTime(time + 0.1, function()
+            --     host:RemoveTag("stoppingtime")
+            -- end)
+            if time > 0 then
+                if not ent.components.timer:TimerExists("stoppingtime") then
+                    if not ent:HasTag("stoppingtime") then
+                        ent.components.timer:StartTimer("stoppingtime", time + 0.1)
+                    end
+                elseif ent.components.timer:GetTimeLeft("stoppingtime") < time then
+                    ent.components.timer:SetTimeLeft("stoppingtime", time + 0.1)
+                end
+            elseif ent.components.timer:TimerExists("stoppingtime") then
+                ent.components.timer:StopTimer("stoppingtime")
+            end
+            if not ent:HasTag("stoppingtime") then
+                ent:AddTag("stoppingtime")
+            end
+            self:ResumeEntity(ent, time)
+        end
+    end
+    local grandhost = host and host.components.timestopper and host.components.timestopper:GetHost()
+    makestopping(host)
+    if grandhost and grandhost ~= host then
+        makestopping(grandhost)
+    end
+    -- if grandhost and grandhost:IsValid() then
+    --     grandhost:AddTag("stoppingtime")
+    --     -- host:DoTaskInTime(time + 0.1, function()
+    --     --     host:RemoveTag("stoppingtime")
+    --     -- end)
+    --     if not grandhost.components.timer:TimerExists("stoppingtime") then
+    --         grandhost.components.timer:StartTimer("stoppingtime", time + 0.1)
+    --     elseif grandhost.components.timer:GetTimeLeft("stoppingtime") < time then
+    --         grandhost.components.timer:SetTimeLeft("stoppingtime", time + 0.1)
+    --     end    
+    --     self:ResumeEntity(grandhost, time)
+    -- end
     -- host:AddTag("canmoveintime")
     -- if not host.components.timer:TimerExists("canmoveintime") then
     --     host.components.timer:StartTimer("canmoveintime", time + 0.1)
@@ -376,19 +428,24 @@ function TimeStopper_World:DoTimeStop(host, time, silent, nogrey)
     if not TheWorld:HasTag("the_world") then
         TheWorld.twtask = TheWorld:DoPeriodicTask(0.1, function() self:OnPeriod() end)
         for k, v in pairs(AllPlayers) do
-            v.instoppedtime:set(nogrey and -time or time)
+            v.instoppedtime:set(nogrey and -math.abs(time) or math.abs(time))
             -- if TUNING.TIMESTOPPER_GREYSCREEN and not nogrey then
             --     v:PushEvent("")
             -- end
         end
-        if not TheWorld.components.timer:TimerExists("the_world") then
-            TheWorld.components.timer:StartTimer("the_world", time)
-        else
-            TheWorld.components.timer:SetTimeLeft("the_world", time)
+        if time > 0 then
+            if not TheWorld.components.timer:TimerExists("the_world") then
+                TheWorld.components.timer:StartTimer("the_world", time)
+            else
+                TheWorld.components.timer:SetTimeLeft("the_world", time)
+            end
+        elseif TheWorld.components.timer:TimerExists("the_world") then
+            TheWorld.components.timer:StopTimer("the_world")
         end
-        -- TheSim:SetTimeScale(0)
+    -- TheSim:SetTimeScale(0)
         TheWorld.net.components.clock:Stop()
         TheWorld:AddTag("the_world")
+        TheWorld:PushEvent("the_world")
         -- if TUNING.TIMESTOPPER_GREYSCREEN and not nogrey then
         --     if time < 1 then
         --          TheWorld:PushEvent("overridecolourcube", "images/colour_cubes/ghost_cc.tex")
@@ -403,68 +460,101 @@ function TimeStopper_World:DoTimeStop(host, time, silent, nogrey)
             if host.components.timestopper.ontimestoppedfn then 
                 host.components.timestopper.ontimestoppedfn(silent)
             end
-            if TheWorld.components.timer:TimerExists("twreleasing") then
-                TheWorld.components.timer:SetTimeLeft("twreleasing", time - host.components.timestopper.onresumingtime)
-            else
-                TheWorld.components.timer:StartTimer("twreleasing", time - host.components.timestopper.onresumingtime)
-            end
-            self.releasingfn = host.components.timestopper.onresumingfn
-        end
-    else
-        if TheWorld.components.timer:TimerExists("the_world") and TheWorld.components.timer:GetTimeLeft("the_world") < time then
-            TheWorld.components.timer:SetTimeLeft("the_world", time)
-            if host and host.components.timestopper then 
+            if time > 0 then
+                local time2 = time - host.components.timestopper.onresumingtime
                 if TheWorld.components.timer:TimerExists("twreleasing") then
-                    TheWorld.components.timer:SetTimeLeft("twreleasing", time - host.components.timestopper.onresumingtime)
+                    if TheWorld.components.timer:GetTimeLeft("twreleasing") < time2 then
+                        TheWorld.components.timer:SetTimeLeft("twreleasing", time2)
+                    end
                 else
-                    TheWorld.components.timer:StartTimer("twreleasing", time - host.components.timestopper.onresumingtime)
+                    TheWorld.components.timer:StartTimer("twreleasing", time2)
                 end
                 self.releasingfn = host.components.timestopper.onresumingfn
+            elseif ent.components.timer:TimerExists("twreleasing") then
+                ent.components.timer:StopTimer("twreleasing")
+            end
+        end
+    else
+        if time > 0 then
+            if TheWorld.components.timer:TimerExists("the_world") and TheWorld.components.timer:GetTimeLeft("the_world") < time then
+                TheWorld.components.timer:SetTimeLeft("the_world", time)
+                if host and host.components.timestopper then 
+                    local time2 = time - host.components.timestopper.onresumingtime
+                    if TheWorld.components.timer:TimerExists("twreleasing") then
+                        if TheWorld.components.timer:GetTimeLeft("twreleasing") < time2 then
+                            TheWorld.components.timer:SetTimeLeft("twreleasing", time2)
+                        end
+                    else
+                        TheWorld.components.timer:StartTimer("twreleasing", time2)
+                    end
+                    self.releasingfn = host.components.timestopper.onresumingfn
+                end
+            end
+        else
+            if ent.components.timer:TimerExists("the_world") then
+                ent.components.timer:StopTimer("the_world")
+            end
+            if ent.components.timer:TimerExists("twreleasing") then
+                ent.components.timer:StopTimer("twreleasing")
             end
         end
         if host and host.components.timestopper and host.components.timestopper.ontimestoppedfn then 
             host.components.timestopper.ontimestoppedfn(true)
         end
     end
+    -- if host and host.components.timestopper and host.components.timestopper.ontimestoppedfn then 
+    --     host.components.timestopper.ontimestoppedfn(true)
+    -- end
     if not TheWorld.twlistener then
-        TheWorld:ListenForEvent("timerdone", function(inst, data)
+        TheWorld.twlistener = TheWorld:ListenForEvent("timerdone", function(inst, data)
             if data.name == "the_world" then
-                if TheWorld.twtask ~= nil then
-                    TheWorld.twtask:Cancel()
-                    TheWorld.twtask = nil
-                end
-                self:OnResume()
-                for k, v in pairs(AllPlayers) do
-                    if v.components.timestopper and v.components.timestopper.onresumedfn then 
-                        v.components.timestopper.onresumedfn(silent)
-                    end
-                end
-                -- TheSim:SetTimeScale(1)
-                TheWorld.net.components.clock:Resume()
-                TheWorld:DoTaskInTime(0.1, function()
-                    if TheWorld:HasTag("the_world") then
-                        TheWorld:RemoveTag("the_world")
-                    end
-                end)
-                -- TheWorld:PushEvent("overridecolourcube", nil)
+                self:BreakTimeStop()
+                -- if TheWorld.twtask ~= nil then
+                --     TheWorld.twtask:Cancel()
+                --     TheWorld.twtask = nil
+                -- end
+                -- self:OnResume()
+                -- -- for k, v in pairs(AllPlayers) do
+                -- --     if v.components.timestopper and v.components.timestopper.onresumedfn then 
+                -- --         v.components.timestopper.onresumedfn(silent)
+                -- --     end
+                -- -- end
+                -- -- TheSim:SetTimeScale(1)
+                -- TheWorld.net.components.clock:Resume()
+                -- TheWorld:DoTaskInTime(0.1, function()
+                --     if TheWorld:HasTag("the_world") then
+                --         TheWorld:RemoveTag("the_world")
+                --     end
+                -- end)
+                -- TheWorld:PushEvent("the_world_end", {silent = silent})
             end
-            if data.name == "twreleasing" and self.releasingfn then -- TODO
-                self.releasingfn(silent)
+            if data.name == "twreleasing" and self.releasingfn then
+                self.releasingfn()
+                self.releasingfn = nil
             end
         end)
-        TheWorld.twlistener = true
+        -- TheWorld.twlistener = true
     end
 
 end
 
 function TimeStopper_World:ResumeEntity(ent, time)
-    if not ent:HasTag("canmoveintime") then
-        ent:AddTag("canmoveintime")
+    if not (ent and ent:IsValid() and time ~= 0) or ent:HasTag("timemaster") then
+        return
     end
-    if not ent.components.timer:TimerExists("canmoveintime") then
-        ent.components.timer:StartTimer("canmoveintime", time + 0.1)
-    elseif ent.components.timer:GetTimeLeft("canmoveintime") < time then
-        ent.components.timer:SetTimeLeft("canmoveintime", time + 0.1)
+    if time > 0 then
+        if not ent.components.timer:TimerExists("canmoveintime") then
+            if not ent:HasTag("canmoveintime") then
+                ent.components.timer:StartTimer("canmoveintime", time + 0.1)
+            end
+        elseif ent.components.timer:GetTimeLeft("canmoveintime") < time then
+            ent.components.timer:SetTimeLeft("canmoveintime", time + 0.1)
+        end
+    elseif ent.components.timer:TimerExists("canmoveintime") then
+        ent.components.timer:StopTimer("canmoveintime")
+    end
+    if not ent:HasTag("canmoveintime") and not ent:HasTag("timemaster") then
+        ent:AddTag("canmoveintime")
     end
     resume(ent)
     -- local projcomp = ent.components.projectile
@@ -529,7 +619,46 @@ function TimeStopper_World:ResumeEntity(ent, time)
     end
 end
 
-function TimeStopper:OnRemoveFromEntity()
+function TimeStopper_World:BreakTimeStop()
+    if TheWorld.components.timer:TimerExists("twreleasing") then
+        TheWorld.components.timer:StopTimer("twreleasing")
+    end
+    if TheWorld.components.timer:TimerExists("the_world") then
+        TheWorld.components.timer:StopTimer("the_world")
+        -- TheWorld.components.timer:SetTimeLeft("the_world", FRAMES)
+    end
+    if TheWorld.twtask ~= nil then
+        TheWorld.twtask:Cancel()
+        TheWorld.twtask = nil
+    end
+    self:OnResume()
+    TheWorld.net.components.clock:Resume()
+    TheWorld:DoTaskInTime(0.1, function()
+        if TheWorld:HasTag("the_world") then
+            TheWorld:RemoveTag("the_world")
+        end
+    end)
+    TheWorld:PushEvent("the_world_end")
+end
+
+function TimeStopper_World:BreakMovability(ent)
+    if ent and ent:IsValid() then
+        if ent.components.timer:TimerExists("canmoveintime") then
+            ent.components.timer:StopTimer("canmoveintime")
+        end
+        if ent.components.timer:TimerExists("stoppingtime") then
+            ent.components.timer:StopTimer("stoppingtime")
+        end
+        if ent:HasTag("canmoveintime") and not ent:HasTag("timemaster") then
+            ent:RemoveTag("canmoveintime")
+        end
+        if ent:HasTag("stoppingtime") then
+            ent:RemoveTag("stoppingtime")
+        end
+    end
+end
+
+function TimeStopper_World:OnRemoveFromEntity()
     TheWorld:RemoveTag("the_world")
 end
 

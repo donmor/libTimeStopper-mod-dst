@@ -69,7 +69,7 @@ configuration_options =
             {
                 description = LIMBO({
                     "Normal mode",
-                    ["zh"] = "正常模式",
+                    ["zh"] = "普通模式",
                 }),
                 data = 500,
                 hover = LIMBO({
@@ -79,8 +79,8 @@ configuration_options =
             },
             {
                 description = LIMBO({
-                    "Normal mode",
-                    ["zh"] = "正常模式",
+                    "Powered mode",
+                    ["zh"] = "强力模式",
                 }),
                 data = 2000,
                 hover = LIMBO({
@@ -90,8 +90,8 @@ configuration_options =
             },
             {
                 description = LIMBO({
-                    "Powered mode",
-                    ["zh"] = "强力模式",
+                    "Extreme mode",
+                    ["zh"] = "极限模式",
                 }),
                 data = 9001,
                 hover = LIMBO({
@@ -118,7 +118,7 @@ configuration_options =
                 }),
                 data = true,
                 hover = LIMBO({
-                    "Nightmare creatures won't be stopped",
+                    "Nightmare creatures won't be stopped (only those related to sanity)",
                     ["zh"] = "影怪不受时停影响(仅限与理智相关的)",
                 })
             },
@@ -129,12 +129,46 @@ configuration_options =
                 }),
                 data = false,
                 hover = LIMBO({
-                    "Nightmare creatures could be stopped (only those related to sanity)",
+                    "Nightmare creatures could be stopped",
                     ["zh"] = "所有影怪可被时停",
                 }),
             },
         },
         default = true,
+    },
+    
+    {
+        name = "ignore_wortox",
+        label = LIMBO({
+            "Ignore Wortox",
+            ["zh"] = "排除沃拓克斯",
+        }),
+        options =
+        {
+            {
+                description = LIMBO({
+                    "Enable",
+                    ["zh"] = "开启",
+                }),
+                data = true,
+                hover = LIMBO({
+                    "Wortox won't be stopped",
+                    ["zh"] = "沃拓克斯不受时停影响",
+                })
+            },
+            {
+                description = LIMBO({
+                    "Disable",
+                    ["zh"] = "关闭",
+                }),
+                data = false,
+                hover = LIMBO({
+                    "Wortox could be stopped",
+                    ["zh"] = "沃拓克斯可被时停",
+                }),
+            },
+        },
+        default = false,
     },
     
     {
