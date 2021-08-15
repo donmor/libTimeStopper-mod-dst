@@ -22,25 +22,7 @@ end
 
 function TimeStopper:DoTimeStop(time, silent, nogrey)
     TheWorld.components.timestopper_world:DoTimeStop(time, self.inst, silent, nogrey)
-    -- if self.host and self.host ~= self.inst then
-    --     TheWorld.components.timestopper_world:ResumeEntity(self.inst, time)
-    -- end
-    -- host:AddTag("stoppingtime")
-    -- host:DoTaskInTime(time + 0.1, function()
-    --     host:RemoveTag("stoppingtime")
-    -- end)
 end
-
--- function TimeStopper:StopTimeFor(time, host, silent, nogrey)
---     TheWorld.components.timestopper_world:DoTimeStop(time, host or self:GetHost(), silent, nogrey)
---     if host and host ~= self.inst then
---         TheWorld.components.timestopper_world:ResumeEntity(self.inst, time)
---     end
---     -- host:AddTag("stoppingtime")
---     -- host:DoTaskInTime(time + 0.1, function()
---     --     host:RemoveTag("stoppingtime")
---     -- end)
--- end
 
 function TimeStopper:SetOnTimeStoppedFn(fn)
     self.ontimestoppedfn = fn
@@ -56,7 +38,6 @@ function TimeStopper:SetOnResumedFn(fn)
 end
 
 function TimeStopper:OnRemoveFromEntity()
-    -- self.inst:RemoveTag("stoppingtime")
 	if self.resumedlistener then
 		self.resumedlistener:Cancel()
 		self.resumedlistener = nil

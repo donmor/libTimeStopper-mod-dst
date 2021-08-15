@@ -95,7 +95,7 @@ local function resume(ent)
         ent.AnimState:Resume()
     end
     if ent.Physics then
-        if ent.Physics:GetCollisionGroup() != COLLISION.OBSTACLES and ent.vmass ~= 0 or ent.Physics:GetMotorVel() ~= 0 then
+        if ent.Physics:GetCollisionGroup() ~= COLLISION.OBSTACLES and ent.vmass ~= 0 or ent.Physics:GetMotorVel() ~= 0 then
             if ent.vmass then
                 ent.Physics:SetMass(ent.vmass)
             end
