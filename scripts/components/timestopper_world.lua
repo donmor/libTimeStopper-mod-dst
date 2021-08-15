@@ -29,10 +29,22 @@ local function freeze(ent)
     if ent.AnimState and not isproj then
         ent.AnimState:Pause()
     end
+    -- print(ent.prefab == "boat")
+    -- if ent.prefab == "boat" then
+    --     print("B", ent.Physics, ent.components.boatphysics)
+    -- end
     if ent.Physics then
         local mass = ent.Physics:GetMass()
         if ent.Physics:GetCollisionGroup() == COLLISION.OBSTACLES then
             -- Ignore OBSTACLES
+            if ent.components.boatphysics then
+            -- print("OBSTACLES")
+            --     print("BOAT")
+                -- ent.vmass = mass
+                ent.Physics:SetMotorVel(0, 0, 0)
+                -- ent.Physics:SetMass(0)
+                -- ent.Physics:SetActive(false)
+            end
         elseif mass ~= 0 or ent.Physics:GetMotorVel() ~= 0 then --质量为0, 但不是障碍物, 如海浪
             ent.vmass = mass
             if isproj then
@@ -75,6 +87,11 @@ local function freeze(ent)
             else
                 ent.Physics:SetMass(0)
                 ent.Physics:SetActive(false)
+                -- if ent.components.boatphysics then
+                -- print("NONPROJ")
+                --     print("BOAT")
+                --     ent.Physics:SetMotorVel(0, 0, 0)
+                -- end
             end
         end
     end
@@ -115,9 +132,16 @@ local function resume(ent)
         ent.AnimState:Resume()
     end
     if ent.Physics then
-        if ent.Physics:GetCollisionGroup() == COLLISION.OBSTACLES then
+        -- if ent.Physics:GetCollisionGroup() == COLLISION.OBSTACLES then
             -- Ignore OBSTACLES            
-        elseif ent.vmass ~= 0 or ent.Physics:GetMotorVel() ~= 0 then
+            -- if ent.components.boatphysics then
+                -- if ent.vmass then
+                --     ent.Physics:SetMass(ent.vmass)
+                -- end
+                -- ent.Physics:SetActive(true)
+            -- end
+        if ent.Physics:GetCollisionGroup() != COLLISION.OBSTACLES and ent.vmass ~= 0 or ent.Physics:GetMotorVel() ~= 0 then
+        -- elseif ent.vmass ~= 0 or ent.Physics:GetMotorVel() ~= 0 then
             if ent.vmass then
                 ent.Physics:SetMass(ent.vmass)
             end

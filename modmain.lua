@@ -265,7 +265,7 @@ AddComponentPostInit("health", function(self)	-- <改写生命API
 				else
 					self.currenthealth = val
 				end
-				print(cause)
+				-- print(cause)
 				-- if old_health > 0 and self.currenthealth <= 0 then
 					-- if self.inst:HasTag("time_stopped") then
 						-- self.twtask = self.inst:DoPeriodicTask(0.5, vtick, nil, { self = self, cause = cause, afflicter = afflicter })
@@ -351,6 +351,27 @@ end)
 -- 	local pWorkedBy = self.WorkedBy
 -- 	self.WorkedBy = function(self, worker, numworks)
 -- 		return pWorkedBy(self, worker, numworks)
+-- 	end
+-- end)
+AddComponentPostInit("boatphysics", function(self)
+	local pOnUpdate = self.OnUpdate
+	self.OnUpdate = function(self, dt)
+		-- print("UPDATE")
+		if not TheWorld:HasTag("the_world") then
+		-- print("UPDATE_Y")
+			pOnUpdate(self, dt)
+		end
+	end
+end)
+
+-- AddComponentPostInit("oar", function(self)
+-- 	local pRow = self.Row
+-- 	self.Row = function(self, doer, pos)
+-- 		print("ROW")
+-- 		-- if not TheWorld:HasTag("the_world") then
+-- 		-- print("APPLYFORCE_Y")
+-- 			pRow(self, doer, pos)
+-- 		-- end
 -- 	end
 -- end)
 
