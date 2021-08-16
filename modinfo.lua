@@ -52,8 +52,8 @@ configuration_options =
         label = LIMBO({"Time-stopping mode", ["zh"] = "时间停止模式"}),
         options =
         {
-            {description = LIMBO({"Performance mode" ["zh"] = "性能模式"}), data = 50, hover = LIMBO({"Apply to current screen, for low-end devices", ["zh"] = "时停屏幕范围, 适用于低端机型"})},
-            {description = LIMBO({"Normal mode" ["zh"] = "普通模式"}) data = 500, hover = LIMBO({"Apply to a wide range, for most devices" ["zh"] = "时停较大范围, 适用于大部分机型"})},
+            {description = LIMBO({"Performance mode", ["zh"] = "性能模式"}), data = 50, hover = LIMBO({"Apply to current screen, for low-end devices", ["zh"] = "时停屏幕范围, 适用于低端机型"})},
+            {description = LIMBO({"Normal mode", ["zh"] = "普通模式"}), data = 500, hover = LIMBO({"Apply to a wide range, for most devices", ["zh"] = "时停较大范围, 适用于大部分机型"})},
             {description = LIMBO({"Powered mode", ["zh"] = "强力模式"}), data = 2000, hover = LIMBO({"Apply to a wide range, for servers and high-end devices", ["zh"] = "时停更大范围, 适用于服务器及高端机型"})},
             {description = LIMBO({"Extreme mode", ["zh"] = "极限模式"}), data = 9001, hover = LIMBO({"Stop the whole world(Many lags, do on your own risk!)", ["zh"] = "时停整个世界(很卡, 风险自负!)"})
             },
