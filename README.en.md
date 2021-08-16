@@ -151,36 +151,36 @@ A Don't Starve Together library mod providing APIs for time-stopping abilities.
     ###### timestopper_world:OnRemoveFromEntity()
     Internal call that removes tags on world entities. Must not be called by any 3rd-party code.
 #### Netvars
-- ##### <net_float>instoppedtime
+- ###### <net_float>instoppedtime
     Host: All player entities
 
     Event: `instoppedtime`
 
     Used to push data to all players on enter or leave the stopped time.
-- ##### <net_string>globalsound
+- ###### <net_string>globalsound
     Host: All player entities
 
     Event: `globalsound`
 
     Used to push sound effects to all player. The SE will be player by the world entity (client side)
 #### Events
-- ##### instoppedtime
+- ###### instoppedtime
     Triggered on enter or leave the stopped time, initially used to control grey-screen and weather effects. May also be listened manually.
 
         Pusher   TimeStopper_World                    Triggered by setting the value of netvar with the same name for each player on enter or leave the stopped time.
         Pusher   All player entities (client side)    Triggered on all weather entities by player if an event with the same name is triggered on the player.
         Listener All player entities (client side)    If triggered, the netvar with the same name will be fetched. if it is positive, the color of the display will be reversed and then greyed out in 0.25s, or just greyed out if less than a second; the display will be set to normal if the value is 0. An event with the same name will be pushed to all weather entities.
         Listener All weather entities (client side)   If triggered, the netvar with the same name will be fetched. if it is a non-zero value, the weather particles will be freezed, otherwise they'll be released.
-- ##### globalsound
+- ###### globalsound
     Manually triggered by setting the value of netvar with the same name, and push sound effects to the player. Note that the value must be different than before in order to trigger the event. A solution is to call `globalsound:set_local("")` 0.1s later on the server side.
 
         Listener All player entities (client side)    If triggered, the netvar with the same name will be fetched. The name of the SE will be passed to the sound emitter of the world entity (client side) and be played.
-- ##### time_stopped
+- ###### time_stopped
     Triggered on an entity being stopped, initially used to control the status of burnable entities. May also be listened manually.
 
         Pusher   TimeStopper_World                    Triggered on an entity being found and stopped.
         Listener All burning entities                 If triggered, the burn out countdown will be stopped and preserved .
-- ##### time_resumed
+- ###### time_resumed
     Triggered on an entity being released, initially used to control the status of burnable entities. May also be listened manually.
 
         Pusher   TimeStopper_World                    Triggered on an entity in `twents` being released.

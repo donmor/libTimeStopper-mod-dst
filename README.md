@@ -152,45 +152,45 @@ libTimeStopper是一个向饥荒联机版添加了时间停止系能力相关代
     ###### timestopper_world:OnRemoveFromEntity()
     系统调用，清理世界实体的Tag。一般不应被任何第三方代码调用。
 #### Netvars
-- ##### <net_float>instoppedtime
+- ###### <net_float>instoppedtime
     宿主：全体玩家实体
 
     事件：`instoppedtime`
 
     用于在时停发动及结束时向所有玩家推送相关数据。
-- ##### <net_string>globalsound
+- ###### <net_string>globalsound
     宿主：全体玩家实体
 
     事件：`globalsound`
 
     用于向全体玩家推送一段音效。此音效将以世界（客户端）为宿主播放。
 #### Events
-- ##### instoppedtime
+- ###### instoppedtime
     当进入或退出静滞时间时触发，默认用于灰屏特效及天气粒子控制，也可手动监听。
 
         触发 TimeStopper_World        当进入或退出静滞时间时，在每个玩家实体通过为Netvar赋值触发此事件。
         触发 全体玩家实体(客户端)      此事件在玩家实体被触发时，在所有天气实体触发同名事件。
         监听 全体玩家实体(客户端)      被触发时将读取同名Netvar的值，若为正值则使显示反色，0.25秒后视野变灰；不足1秒则只使视野变灰；若为0则使视野恢复原状。此外还将向天气实体（客户端）推送同名事件。
         监听 所有天气实体(客户端)      被触发时将读取同名Netvar的值，若为非0值则使天气粒子呈现静滞状态，否则将其恢复正常。
-- ##### globalsound
+- ###### globalsound
     通过为Netvar赋值手动触发，向玩家推送一段音效。每次赋值必须不同于上一次才能触发事件，可以通过在服务端隔0.1秒执行`globalsound:set_local("")`解决。
 
         监听 全体玩家实体(客户端)      被触发时将读取同名Netvar的值，并以世界（客户端）为宿主播放。
-- ##### time_stopped
+- ###### time_stopped
     当实体被停止时触发，用于控制可燃物燃烧状态，也可手动监听。
 
         触发 TimeStopper_World        当实体被找到并停止时对其触发此事件。
         监听 正在燃烧的实体            被触发时停止并锁存燃尽倒计时器。
-- ##### time_resumed
+- ###### time_resumed
     当实体被释放时触发，用于控制可燃物燃烧状态，也可手动监听。
 
         触发 TimeStopper_World        当twents表中的实体被释放时对其触发此事件。
         监听 正在燃烧的实体            被触发时使用锁存的回调和剩余时间启动燃尽倒计时器。
-- ##### the_world
+- ###### the_world
     当世界进入静滞时间时触发，可手动监听。
 
         触发 TimeStopper_World        当执行timestopper_world:DoTimeStop时在世界实体（服务端）触发此事件。
-- ##### the_world_end
+- ###### the_world_end
     当世界进入静滞时间时触发，可手动监听。
 
         触发 TimeStopper_World        当时间停止结束时在世界实体（服务端）触发此事件。
