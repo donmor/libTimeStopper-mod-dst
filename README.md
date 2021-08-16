@@ -1,6 +1,6 @@
 # libTimeStopper
 
-中文 | [English](Readme.en.md)
+中文 | [English](README.en.md)
 
 libTimeStopper是一个向饥荒联机版添加了时间停止系能力相关代码的支持库类MOD。
 ### 主要特性
