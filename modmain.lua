@@ -70,14 +70,17 @@ AddComponentPostInit("burnable", function(self)
 	end    
 	local pStartWildfire = self.StartWildfire
 	self.StartWildfire = function(self)
-		pStartWildfire(self)
-		local pfn = self.smolder_task.fn
-		self.smolder_task.fn = function(inst, self)
-			if not TheWorld:HasTag("the_world") then
-				pfn(inst, self)
+		if not TheWorld:HasTag("the_world") then
+			pStartWildfire(self)
+			if self.smolder_task then
+				local pfn = self.smolder_task.fn
+				self.smolder_task.fn = function(inst, self)
+					if not TheWorld:HasTag("the_world") then
+						pfn(inst, self)
+					end
+				end
 			end
 		end
-
 	end
 end)	-- <改写燃烧
 
