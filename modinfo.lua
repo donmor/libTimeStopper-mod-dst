@@ -4,7 +4,7 @@ local function LIMBO(tbl)
 end
 
 name = "libTimeStopper"
-version = "1.0.1"
+version = "1.0.2"
 description = LIMBO({
 [[
 libTimeStopper - Time stopping library
