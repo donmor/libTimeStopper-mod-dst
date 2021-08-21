@@ -1,13 +1,6 @@
-local function SYS_INITGLOBAL()
-	GLOBAL.setmetatable(env, {
-		__index = function(t, k)
-			if k ~= "PrefabFiles" and k ~= "Assets" and k ~= "clothing_exclude" then
-				return GLOBAL[k] and GLOBAL[k] or nil
-			end
-		end,
-	})	
-end
-SYS_INITGLOBAL()
+GLOBAL.setmetatable(env,{__index = function(_, k)
+	return GLOBAL.rawget(GLOBAL,k)
+end})
 
 TUNING.TIMESTOPPER_PERFORMANCE = GetModConfigData("performance") or 500
 TUNING.TIMESTOPPER_IGNORE_SHADOW = GetModConfigData("ignore_shadow") or true
