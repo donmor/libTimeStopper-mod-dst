@@ -74,6 +74,7 @@ libTimeStopper是一个向饥荒联机版添加了时间停止系能力相关代
     |`timestopper:GetHost()`|获取此实体的主实体|
     |`timestopper:SetHost(host)`|定义此实体的主实体|
     |`timestopper:DoTimeStop(time, silent, nogrey)`|发动一次时间停止能力，并使此实体及主实体获得相应的可活动时间|
+    |`timestopper:BreakTimeStop()`|尝试立即使时间停止结束|
     |`timestopper:SetOnTimeStoppedFn(fn)`|定义由此实体成功发动时停时执行的回调函数|
     |`timestopper:SetOnResumingFn(time, fn)`|定义由此实体发动的时停即将结束时执行的回调函数|
     |`timestopper:SetOnResumedFn(fn)`|定义由此实体成功发动时停时执行的回调函数|
@@ -90,6 +91,8 @@ libTimeStopper是一个向饥荒联机版添加了时间停止系能力相关代
         参数 <number>time             要停止的时间，单位为秒，必须非0（否则没有任何效果）。负值表示一直停止时间。
         参数 <bool>silent             是否静默发动时停，可以被省略。此参数将被传递到回调ontimestoppedfn及onresumingtime中，通常用于控制是否需要播放特效。
         参数 <bool>nogrey             是否忽略内置灰屏特效，可以被省略。当在停止的时间中调用时忽略此参数。
+    ###### timestopper:BreakTimeStop()
+    发动时停期间可用，立即使时间停止结束，除非自身可活动时间短于总剩余时间。尤其适用将负值传入了`DoTimeStop`的情况。
     ###### timestopper:SetOnTimeStoppedFn(fn)
     定义由此实体成功发动时停时执行的回调函数。此函数通常用于播放特效。
     

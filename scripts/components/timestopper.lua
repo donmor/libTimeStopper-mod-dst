@@ -24,6 +24,15 @@ function TimeStopper:DoTimeStop(time, silent, nogrey)
     TheWorld.components.timestopper_world:DoTimeStop(time, self.inst, silent, nogrey)
 end
 
+function TimeStopper:BreakTimeStop()
+    if self.inst:HasTag("stoppingtime") and
+            (not TheWorld.components.timer:TimerExists("the_world") or
+            not self.inst.components.timer:TimerExists("stoppingtime") or
+            TheWorld.components.timer:GetTimeLeft("the_world") < self.inst.components.timer:GetTimeLeft("stoppingtime")) then
+        TheWorld.components.timestopper_world:BreakTimeStop()
+    end
+end
+
 function TimeStopper:SetOnTimeStoppedFn(fn)
     self.ontimestoppedfn = fn
 end

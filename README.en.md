@@ -73,6 +73,7 @@ A Don't Starve Together library mod providing APIs for time-stopping abilities.
     |`timestopper:GetHost()`|Get the master entity of this entity|
     |`timestopper:SetHost(host)`|Define the master entity of this entity|
     |`timestopper:DoTimeStop(time, silent, nogrey)`|Perform a time-stop and make the master entity able to move in stopped time for a few seconds|
+    |`timestopper_world:BreakTimeStop()`|Try resuming the stopped world immediately|
     |`timestopper:SetOnTimeStoppedFn(fn)`|Define a callback that is called on time-stop successfully performed by the entity|
     |`timestopper:SetOnResumingFn(time, fn)`|Define a callback that is called a specifit time before the end of time-stop|
     |`timestopper:SetOnResumedFn(fn)`|Define a callback that is called on the end of time-stop|
@@ -89,6 +90,8 @@ A Don't Starve Together library mod providing APIs for time-stopping abilities.
         Parameter <number>time                        The period of time (seconds) to stop, must greater than 0, otherwise nothing will be done.
         Parameter <bool>silent                        Define whether time-stop should be performed silently, may be ignored. This will be passed to callback `ontimestoppedfn` and `onresumingtime`, usually used on effects.
         Parameter <bool>nogrey                        Define whether the initial grey-screen should be disabled, may be ignored. Ignored if called in stopped time.
+    ###### timestopper_world:BreakTimeStop()
+    Immediately resume the stopped world if the entity is stopping the time. Fails if the remaining stopped time is longer than entity's remaining movable time. Used especially if passed a negative `time` to `DoTimeStop`.
     ###### timestopper:SetOnTimeStoppedFn(fn)
     Define a callback that is called on time-stop successfully performed by the entity. This callback is usually used on effects.
     
