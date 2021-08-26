@@ -85,6 +85,17 @@ configuration_options =
     },
     
     {
+        name = "ignore_charlie",
+        label = LIMBO({"Ignore Charlie", ["zh"] = "排除查理"}),
+        options =
+        {
+            {description = LIMBO({"Enable", ["zh"] = "开启"}), data = true, hover = LIMBO({"Charlie could attack in stopped time", ["zh"] = "查理不受时停影响"})},
+            {description = LIMBO({"Disable", ["zh"] = "关闭"}), data = false, hover = LIMBO({"Charlie won't attack stopped time", ["zh"] = "时停中查理无法攻击"})},
+        },
+        default = true,
+    },
+    
+    {
         name = "invincible_foe",
         label = LIMBO({"Invincible foe", ["zh"] = "目标无敌"}),
         options =

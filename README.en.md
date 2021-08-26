@@ -35,6 +35,12 @@ A Don't Starve Together library mod providing APIs for time-stopping abilities.
     |-|-|
     |Enable|Wortox won't be stopped|
     |Disable|Wortox could be stopped[default]|
+- ##### Ignore Charlie
+    Toggle how time-stop affects Charlie, usually depend on worldview of related mods
+    |||
+    |-|-|
+    |Enable|Charlie will not be affected by time-stop[default]|
+    |Disable|Charlie won't attack in stopped time|
 - ##### Invincible foe
     Toggle whether the target could be damaged in stopped time, usually depend on worldview of related mods
     |||

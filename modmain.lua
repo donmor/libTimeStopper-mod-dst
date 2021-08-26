@@ -5,6 +5,7 @@ end})
 TUNING.TIMESTOPPER_PERFORMANCE = GetModConfigData("performance") or 500
 TUNING.TIMESTOPPER_IGNORE_SHADOW = GetModConfigData("ignore_shadow") or true
 TUNING.TIMESTOPPER_IGNORE_WORTOX = GetModConfigData("ignore_wortox") or false
+TUNING.TIMESTOPPER_IGNORE_CHARLIE = GetModConfigData("ignore_charlie") or true
 TUNING.TIMESTOPPER_INVINCIBLE_FOE = GetModConfigData("invincible_foe") or false
 TUNING.TIMESTOPPER_GREYSCREEN = GetModConfigData("greyscreen") or true
 
@@ -307,6 +308,14 @@ AddPrefabPostInitAny(function(inst)
 		return
 	end
     inst:DoTaskInTime(0, function()
+		if not TUNING.TIMESTOPPER_IGNORE_CHARLIE and inst.components.grue then
+			inst:ListenForEvent("the_world", function(world)
+				inst.components.grue:AddImmunity("the_world")
+			end, TheWorld)
+			inst:ListenForEvent("the_world_end", function(world)
+				inst.components.grue:RemoveImmunity("the_world")
+			end, TheWorld)
+		end
 		inst:ListenForEvent("timerdone", function(inst, data)
 			if data.name == "canmoveintime" and inst:HasTag("canmoveintime") and not inst:HasTag("timemaster") then
 				inst:RemoveTag("canmoveintime")

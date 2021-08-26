@@ -147,6 +147,9 @@ end
 
 function TimeStopper_World:OnPeriod()
     for k, v in pairs(AllPlayers) do
+        if not TheWorld.nogrey and v.instoppedtime:value() == 0 then
+            v.instoppedtime:set(0.5)
+        end
         local x0, y0, z0 = v.Transform:GetWorldPosition()
         for k, v in pairs(TheSim:FindEntities(x0, y0, z0, TUNING.TIMESTOPPER_PERFORMANCE, nil, {"wall", "INLIMBO", "time_stopped", "canmoveintime"})) do
             if v and v:IsValid() and
@@ -184,6 +187,7 @@ end
 
 
 function TimeStopper_World:DoTimeStop(time, host, silent, nogrey)
+    TheWorld.nogrey = nogrey
     if time == 0 then
         return
     end
