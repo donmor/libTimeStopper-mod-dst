@@ -223,8 +223,8 @@ AddComponentPostInit("playerprox", function(self)
 end)	-- <改写玩家侦测
 
 AddComponentPostInit("builder", function(self)
-	table.insert(self.exclude_tags, "time_stopped")
-end)
+	table.insert(self.exclude_tags, "time_stopped")	-- 时停禁止使用建造站
+end)	-- <改写建造
 
 AddComponentPostInit("clock", function(self)
 	self.stopped = false
