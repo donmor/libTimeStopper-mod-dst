@@ -3,11 +3,11 @@ GLOBAL.setmetatable(env,{__index = function(_, k)
 end})
 
 TUNING.TIMESTOPPER_PERFORMANCE = GetModConfigData("performance") or 500
-TUNING.TIMESTOPPER_IGNORE_SHADOW = GetModConfigData("ignore_shadow") or true
-TUNING.TIMESTOPPER_IGNORE_WORTOX = GetModConfigData("ignore_wortox") or false
-TUNING.TIMESTOPPER_IGNORE_CHARLIE = GetModConfigData("ignore_charlie") or true
-TUNING.TIMESTOPPER_INVINCIBLE_FOE = GetModConfigData("invincible_foe") or false
-TUNING.TIMESTOPPER_GREYSCREEN = GetModConfigData("greyscreen") or true
+TUNING.TIMESTOPPER_IGNORE_SHADOW = GetModConfigData("ignore_shadow")
+TUNING.TIMESTOPPER_IGNORE_WORTOX = GetModConfigData("ignore_wortox")
+TUNING.TIMESTOPPER_IGNORE_CHARLIE = GetModConfigData("ignore_charlie")
+TUNING.TIMESTOPPER_INVINCIBLE_FOE = GetModConfigData("invincible_foe")
+TUNING.TIMESTOPPER_GREYSCREEN = GetModConfigData("greyscreen")
 
 AddComponentPostInit("projectile", function(self)
 	self.origspeed = self.speed
@@ -111,12 +111,12 @@ AddComponentPostInit("health", function(self)
 		if self.currenthealth <= 0 then
 			TheWorld:PushEvent("entity_death", { inst = self.inst, cause = self.lastcause, afflicter = self.lastafflicter })
 			self.inst:PushEvent("death", { cause = self.lastcause, afflicter = self.lastafflicter })
-            if(self.inst:HasTag("player")) then
-                NotifyPlayerProgress("TotalPlayersKilled", 1, self.lastafflicter);
-            else
-                NotifyPlayerProgress("TotalEnemiesKilled", 1, self.lastafflicter);
-            end
-        	if not self.nofadeout then
+			if(self.inst:HasTag("player")) then
+				NotifyPlayerProgress("TotalPlayersKilled", 1, self.lastafflicter);
+			else
+				NotifyPlayerProgress("TotalEnemiesKilled", 1, self.lastafflicter);
+			end
+			if not self.nofadeout then
 				self.inst:AddTag("NOCLICK")
 				self.inst.persists = false
 				self.inst:DoTaskInTime(self.destroytime or 2, ErodeAway)
@@ -204,6 +204,28 @@ AddComponentPostInit("perishable", function(self)
 	end
 end)	-- <改写腐烂
 
+AddComponentPostInit("playerprox", function(self)
+	local ptargetmode = self.targetmode
+	self.targetmode = function(inst, self)
+		if not inst:HasTag("time_stopped") then
+			ptargetmode(inst, self)
+		end
+	end
+	local pSetTargetMode = self.SetTargetMode
+	self.SetTargetMode = function(self, mode, target, override)
+		local vmode = function(inst, self)
+			if not inst:HasTag("time_stopped") then
+				ptargetmode(inst, self)
+			end
+		end
+		pSetTargetMode(self, vmode, target, override)
+	end
+end)	-- <改写玩家侦测
+
+AddComponentPostInit("builder", function(self)
+	table.insert(self.exclude_tags, "time_stopped")
+end)
+
 AddComponentPostInit("clock", function(self)
 	self.stopped = false
 	self.Stop = function(self)
@@ -225,12 +247,29 @@ AddPrefabPostInit("world", function(inst)
 	if not TheWorld.ismastersim then
 		return
 	end
-    if not inst.components.timer then
-        inst:AddComponent("timer")
-    end
-    if not inst.components.timestopper_world then
-        inst:AddComponent("timestopper_world")
-    end
+	if not inst.components.timer then
+		inst:AddComponent("timer")
+	end
+	if not inst.components.timestopper_world then
+		inst:AddComponent("timestopper_world")
+	end
+end)
+
+AddPrefabPostInit("creepyeyes", function(inst)
+	if ThePlayer == nil or ThePlayer.instoppedtime:value() ~= 0 then
+		inst:DoTaskInTime(0, inst.Remove)
+	else
+		inst:DoTaskInTime(0, function()
+			if ThePlayer.instoppedtime:value() ~= 0 then
+				inst:Remove()
+			end
+		end)
+		inst:ListenForEvent("instoppedtime", function(player)
+			if player.instoppedtime:value() ~= 0 then
+				inst:Remove()
+			end
+		end, ThePlayer)
+	end
 end)
 
 -- 时停可刮牛毛
@@ -238,16 +277,16 @@ AddPrefabPostInit("beefalo", function(inst)
 	if not TheWorld.ismastersim then
 		return
 	end
-    if inst.components.beard then
+	if inst.components.beard then
 		local old_can = inst.components.beard.canshavetest
-        inst.components.beard.canshavetest = function(inst, ...)
-            if TheWorld:HasTag("the_world") then
-                return true
-            else
-                return old_can(inst, ...)
-            end
-        end
-    end
+		inst.components.beard.canshavetest = function(inst, ...)
+			if TheWorld:HasTag("the_world") then
+				return true
+			else
+				return old_can(inst, ...)
+			end
+		end
+	end
 end)
 
 AddPlayerPostInit(function(inst)
@@ -270,8 +309,8 @@ AddPlayerPostInit(function(inst)
 	end
 	inst.instoppedtime = net_float(inst.GUID, "instoppedtime", "instoppedtime")
 	inst.globalsound = net_string(inst.GUID, "globalsound", "globalsound")
-    inst:DoTaskInTime(0, function()
-        inst:ListenForEvent("instoppedtime", function(inst)
+	inst:DoTaskInTime(0, function()
+		inst:ListenForEvent("instoppedtime", function(inst)
 			local time = inst.instoppedtime and inst.instoppedtime:value() or nil
 			if TUNING.TIMESTOPPER_GREYSCREEN and time and time > 0 then
 				if time < 1 then
@@ -294,27 +333,40 @@ AddPlayerPostInit(function(inst)
 			for k, v in pairs(ents) do
 				v:PushEvent("instoppedtime")
 			end
-        end)
-        inst:ListenForEvent("globalsound", function(inst)
+		end)
+		inst:ListenForEvent("globalsound", function(inst)
 			local sound = inst.globalsound and inst.globalsound:value() or nil
 			if sound then
 				TheWorld.SoundEmitter:PlaySound(sound)
 			end
-        end)
-    end)
+		end)
+	end)
+	if not TheWorld.ismastersim then
+		return
+	end
+	inst:DoTaskInTime(0, function()
+		if not TUNING.TIMESTOPPER_IGNORE_CHARLIE then
+			inst:ListenForEvent("the_world", function(world)
+				inst.components.grue:AddImmunity("the_world")
+			end, TheWorld)
+			inst:ListenForEvent("the_world_end", function(world)
+				inst.components.grue:RemoveImmunity("the_world")
+			end, TheWorld)
+		end
+	end)
 end)
 AddPrefabPostInitAny(function(inst)
 	if not TheWorld.ismastersim then
 		return
 	end
-    inst:DoTaskInTime(0, function()
+	inst:DoTaskInTime(0, function()
 		inst:ListenForEvent("timerdone", function(inst, data)
 			if data.name == "canmoveintime" and inst:HasTag("canmoveintime") and not inst:HasTag("timemaster") then
 				inst:RemoveTag("canmoveintime")
 			end
 			if data.name == "stoppingtime" then
 				if inst:HasTag("stoppingtime") then
-            		inst:RemoveTag("stoppingtime")
+					inst:RemoveTag("stoppingtime")
 				end
 			end
 		end)
@@ -323,10 +375,10 @@ AddPrefabPostInitAny(function(inst)
 				inst:RemoveTag("canmoveintime")
 			end
 		end)
-    end)
-    if not inst.components.timer then
-        inst:AddComponent("timer")
-    end
+	end)
+	if not inst.components.timer then
+		inst:AddComponent("timer")
+	end
 end)
 
 local fxp = {"raindrop","wave_shimmer","wave_shimmer_med", "wave_shimmer_deep","wave_shimmer_flood","wave_shore","impact","shatter"}
