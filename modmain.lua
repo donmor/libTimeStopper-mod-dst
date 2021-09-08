@@ -215,7 +215,7 @@ AddComponentPostInit("playerprox", function(self)
 	self.SetTargetMode = function(self, mode, target, override)
 		local vmode = function(inst, self)
 			if not inst:HasTag("time_stopped") then
-				ptargetmode(inst, self)
+				mode(inst, self)
 			end
 		end
 		pSetTargetMode(self, vmode, target, override)
