@@ -4,7 +4,7 @@ local function LIMBO(tbl)
 end
 
 name = "libTimeStopper"
-version = "1.1.1"
+version = "1.2.0"
 description = LIMBO({
 [[
 libTimeStopper - Time stopping library
@@ -80,6 +80,17 @@ configuration_options =
 		{
 			{description = LIMBO({"Enable", ["zh"] = "开启"}), data = true, hover = LIMBO({"Wortox won't be stopped", ["zh"] = "沃拓克斯不受时停影响"})},
 			{description = LIMBO({"Disable", ["zh"] = "关闭"}), data = false, hover = LIMBO({"Wortox could be stopped", ["zh"] = "沃拓克斯可被时停"})},
+		},
+		default = false,
+	},
+
+	{
+		name = "ignore_wanda",
+		label = LIMBO({"Ignore Wanda", ["zh"] = "排除旺达"}),
+		options =
+		{
+			{description = LIMBO({"Enable", ["zh"] = "开启"}), data = true, hover = LIMBO({"Wanda won't be stopped", ["zh"] = "旺达不受时停影响"})},
+			{description = LIMBO({"Disable", ["zh"] = "关闭"}), data = false, hover = LIMBO({"Wanda could be stopped", ["zh"] = "旺达可被时停"})},
 		},
 		default = false,
 	},

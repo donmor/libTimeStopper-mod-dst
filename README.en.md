@@ -35,6 +35,12 @@ A Don't Starve Together library mod providing APIs for time-stopping abilities.
     |-|-|
     |Enable|Wortox won't be stopped|
     |Disable|Wortox could be stopped[default]|
+- ##### Ignore Wanda
+    Make Wanda always able to move in stopped time, because she "Has excellent time management skills"
+    |||
+    |-|-|
+    |Enable|Wanda won't be stopped|
+    |Disable|Wanda could be stopped[default]|
 - ##### Ignore Charlie
     Toggle how time-stop affects Charlie, usually depend on worldview of related mods
     |||

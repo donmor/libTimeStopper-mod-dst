@@ -5,6 +5,7 @@ end})
 TUNING.TIMESTOPPER_PERFORMANCE = GetModConfigData("performance") or 500
 TUNING.TIMESTOPPER_IGNORE_SHADOW = GetModConfigData("ignore_shadow")
 TUNING.TIMESTOPPER_IGNORE_WORTOX = GetModConfigData("ignore_wortox")
+TUNING.TIMESTOPPER_IGNORE_WANDA = GetModConfigData("ignore_wanda")
 TUNING.TIMESTOPPER_IGNORE_CHARLIE = GetModConfigData("ignore_charlie")
 TUNING.TIMESTOPPER_INVINCIBLE_FOE = GetModConfigData("invincible_foe")
 TUNING.TIMESTOPPER_GREYSCREEN = GetModConfigData("greyscreen")
@@ -39,7 +40,7 @@ AddComponentPostInit("burnable", function(self)
 			if self.task then
 				self.taskfn = self.task.fn
 				self.taskremaining = GetTimeForTick(self.task.nexttick - GetTick())
-				if self.taskfn and self.taskremaining then 
+				if self.taskfn and self.taskremaining then
 					self.task:Cancel()
 					self.task = nil
 				end
@@ -47,10 +48,10 @@ AddComponentPostInit("burnable", function(self)
 		end
 	local pExtendBurning = self.ExtendBurning
 	self.ExtendBurning = function(self)
-		if not self.twevent then 
+		if not self.twevent then
 			self.twevent = self.inst:ListenForEvent("time_stopped", eventfn)
 		end
-		if not self.twevent2 then 
+		if not self.twevent2 then
 			self.twevent2 = self.inst:ListenForEvent("time_resumed", function()
 				if not self.task and self.taskfn and self.taskremaining then
 					self.task = self.inst:DoTaskInTime(self.taskremaining > 0 and self.taskremaining + FRAMES * 3 or FRAMES * 3, self.taskfn, self)
@@ -61,7 +62,7 @@ AddComponentPostInit("burnable", function(self)
 		if self.inst:HasTag("time_stopped") then
 			self.inst:DoTaskInTime(FRAMES, eventfn)
 		end
-	end    
+	end
 	local pStartWildfire = self.StartWildfire
 	self.StartWildfire = function(self)
 		if not TheWorld:HasTag("the_world") then
@@ -157,7 +158,7 @@ AddComponentPostInit("disappears", function(self)
 		if self.disappeartask then
 			self.taskfn = self.disappeartask.fn
 			self.taskremaining = GetTimeForTick(self.disappeartask.nexttick - GetTick())
-			if self.taskfn and self.taskremaining then 
+			if self.taskfn and self.taskremaining then
 				self.disappeartask:Cancel()
 				self.disappeartask = nil
 			end
@@ -165,10 +166,10 @@ AddComponentPostInit("disappears", function(self)
 	end
 	local pPrepareDisappear = self.PrepareDisappear
 	self.PrepareDisappear = function(self)
-		if not self.twevent then 
+		if not self.twevent then
 			self.twevent = self.inst:ListenForEvent("time_stopped", eventfn)
 		end
-		if not self.twevent2 then 
+		if not self.twevent2 then
 			self.twevent2 = self.inst:ListenForEvent("time_resumed", function()
 				if not self.disappeartask and self.taskfn and self.taskremaining then
 					self.disappeartask = self.inst:DoTaskInTime(self.taskremaining > 0 and self.taskremaining + FRAMES * 3 or FRAMES * 3, self.taskfn, self)
@@ -226,6 +227,17 @@ AddComponentPostInit("builder", function(self)
 	table.insert(self.exclude_tags, "time_stopped")	-- 时停禁止使用建造站
 end)	-- <改写建造
 
+AddComponentPostInit("oldager", function(self)
+	local pOnUpdate = self.OnUpdate
+	self.OnUpdate = function(self, dt)
+		return not self.inst:HasTag("time_stopped") and pOnUpdate(self, dt)
+	end
+	local pOnTakeDamage = self.OnTakeDamage
+	self.OnTakeDamage = function(self, amount, overtime, cause, ignore_invincible, afflicter, ignore_absorb)
+		return not self.inst:HasTag("time_stopped") and pOnTakeDamage(self, amount, overtime, cause, ignore_invincible, afflicter, ignore_absorb)
+	end
+end)	-- <改写Wanda衰老
+
 AddComponentPostInit("clock", function(self)
 	self.stopped = false
 	self.Stop = function(self)
@@ -240,7 +252,7 @@ AddComponentPostInit("clock", function(self)
 			return pOnUpdate(self, dt)
 		end
 	end
-	
+
 end)	-- <改写时钟
 
 AddPrefabPostInit("world", function(inst)
@@ -290,7 +302,7 @@ AddPrefabPostInit("beefalo", function(inst)
 end)
 
 AddPlayerPostInit(function(inst)
-	if inst.prefab == "wortox" and TUNING.TIMESTOPPER_IGNORE_WORTOX then
+	if inst.prefab == "wortox" and TUNING.TIMESTOPPER_IGNORE_WORTOX or inst.prefab == "wanda" and TUNING.TIMESTOPPER_IGNORE_WANDA then
 		inst:AddTag("timemaster")
 		inst:AddTag("canmoveintime")
 	end
@@ -327,7 +339,7 @@ AddPlayerPostInit(function(inst)
 					TheWorld.grey_task:Cancel()
 					TheWorld.grey_task = nil
 				end
-			end	
+			end
 			local x, y, z = inst.Transform:GetWorldPosition()
 			local ents = TheSim:FindEntities(x, y, z, 1, { "FX" })
 			for k, v in pairs(ents) do
@@ -381,11 +393,36 @@ AddPrefabPostInitAny(function(inst)
 	end
 end)
 
-local fxp = {"raindrop","wave_shimmer","wave_shimmer_med", "wave_shimmer_deep","wave_shimmer_flood","wave_shore","impact","shatter"}
-for _,v in pairs(fxp) do 
+local fxp = {"raindrop", "wave_shimmer", "wave_shimmer_med", "wave_shimmer_deep", "wave_shimmer_flood", "wave_shore", "impact", "shatter"}
+for _,v in pairs(fxp) do
 	AddPrefabPostInit(v, function(inst)
 		if ThePlayer and ThePlayer.instoppedtime:value() ~= 0 then
 			inst:Hide()
+		end
+	end)
+end
+
+local fxv = {"staffcastfx", "staffcastfx_mount", "cointosscastfx", "cointosscastfx_mount"}
+for _,v in pairs(fxv) do
+	AddPrefabPostInit(v, function(inst)
+		local pSetUp = inst.SetUp
+		inst.SetUp = function(inst, colour)
+			local parent = inst.entity:GetParent()
+			if parent and parent:HasTag("canmoveintime") then
+				inst:AddTag("canmoveintime")
+			end
+			pSetUp(inst, colour)
+		end
+	end)
+end
+
+local fxs = {"pocketwatch_cast_fx", "pocketwatch_cast_fx_mount", "pocketwatch_warpback_fx", "pocketwatch_warpbackout_fx"}
+for _,v in pairs(fxs) do
+	AddPrefabPostInit(v, function(inst)
+		local pSetUp = inst.SetUp
+		inst.SetUp = function(inst, colour)
+			inst:AddTag("canmoveintime")
+			pSetUp(inst, colour)
 		end
 	end)
 end

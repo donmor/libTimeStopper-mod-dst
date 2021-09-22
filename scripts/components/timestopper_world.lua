@@ -71,6 +71,9 @@ local function freeze(ent)
 		ent:StopBrain()
 		if ent.sg then
 			ent.sg:Stop()
+			if ent.components.health and ent.components.oldager then
+				ent.sg:AddStateTag("nomorph")
+			end
 		end
 		if ent.components.locomotor then
 			ent.components.locomotor:StopUpdatingInternal()
@@ -80,7 +83,7 @@ local function freeze(ent)
 		end
 		if ent.components.playercontroller then
 			ent.components.playercontroller:Enable(false)
-		end
+	end
 	end
 	if not ent:HasTag("time_stopped") then
 		ent:AddTag("time_stopped")
@@ -138,6 +141,12 @@ local function resume(ent)
 		end
 		if ent.components.health then
 			ent.components.health:UpdateStatus()
+			if ent.components.oldager then
+				if ent.sg then
+					ent.sg:RemoveStateTag("nomorph")
+				end
+				ent:PushEvent("healthdelta", { oldpercent = ent.components.health:GetPercent(), newpercent = ent.components.health:GetPercent(), overtime = false, cause = "oldager_component", afflicter = nil, amount = 0 })
+			end
 		end
 	end
 	if ent:HasTag("time_stopped") then
@@ -232,8 +241,8 @@ function TimeStopper_World:DoTimeStop(time, host, silent, nogrey)
 		TheWorld.net.components.clock:Stop()
 		TheWorld:AddTag("the_world")
 		TheWorld:PushEvent("the_world")
-		if host and host.components.timestopper then 
-			if host.components.timestopper.ontimestoppedfn then 
+		if host and host.components.timestopper then
+			if host.components.timestopper.ontimestoppedfn then
 				host.components.timestopper.ontimestoppedfn(silent)
 			end
 			if time > 0 then
@@ -254,7 +263,7 @@ function TimeStopper_World:DoTimeStop(time, host, silent, nogrey)
 		if time > 0 then
 			if TheWorld.components.timer:TimerExists("the_world") and TheWorld.components.timer:GetTimeLeft("the_world") < time then
 				TheWorld.components.timer:SetTimeLeft("the_world", time)
-				if host and host.components.timestopper then 
+				if host and host.components.timestopper then
 					local time2 = time - host.components.timestopper.onresumingtime
 					if TheWorld.components.timer:TimerExists("twreleasing") then
 						if TheWorld.components.timer:GetTimeLeft("twreleasing") < time2 then
@@ -274,7 +283,7 @@ function TimeStopper_World:DoTimeStop(time, host, silent, nogrey)
 				ent.components.timer:StopTimer("twreleasing")
 			end
 		end
-		if host and host.components.timestopper and host.components.timestopper.ontimestoppedfn then 
+		if host and host.components.timestopper and host.components.timestopper.ontimestoppedfn then
 			host.components.timestopper.ontimestoppedfn(true)
 		end
 	end
