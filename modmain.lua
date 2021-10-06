@@ -39,7 +39,7 @@ AddComponentPostInit("burnable", function(self)
 		local function eventfn()
 			if self.task then
 				self.taskfn = self.task.fn
-				self.taskremaining = GetTimeForTick(self.task.nexttick - GetTick())
+				self.taskremaining = self.task.nexttick and GetTimeForTick(self.task.nexttick - GetTick()) or self.burntime
 				if self.taskfn and self.taskremaining then
 					self.task:Cancel()
 					self.task = nil
