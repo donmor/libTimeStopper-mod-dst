@@ -53,31 +53,11 @@ AddComponentPostInit("burnable", function(self)
 			self.taskfn = nil
 		end
 	end
-	-- local function eventfn()
-	-- 	if self.task and self.task.nexttick then
-	-- 		self.taskfn = self.task.fn
-	-- 		self.taskremaining = GetTimeForTick(self.task.nexttick - GetTick())
-	-- 		if self.taskfn and self.taskremaining then
-	-- 			self.task:Cancel()
-	-- 			self.task = nil
-	-- 		end
-	-- 	end
-	-- end
 	local function eventfn()
 		self:PauseBurning()
 	end
 	local pExtendBurning = self.ExtendBurning
 	self.ExtendBurning = function(self)
-		-- if not self.twevent then
-		-- 	self.twevent = self.inst:ListenForEvent("time_stopped", eventfn)
-		-- end
-		-- if not self.twevent2 then
-		-- 	self.twevent2 = self.inst:ListenForEvent("time_resumed", function()
-		-- 		if not self.task and self.taskfn and self.taskremaining then
-		-- 			self.task = self.inst:DoTaskInTime(self.taskremaining > 0 and self.taskremaining + FRAMES * 3 or FRAMES * 3, self.taskfn, self)
-		-- 		end
-		-- 	end)
-		-- end
 		pExtendBurning(self)
 		if self.inst:HasTag("time_stopped") then
 			self.inst:DoTaskInTime(FRAMES, eventfn)
@@ -191,31 +171,11 @@ AddComponentPostInit("disappears", function(self)
 			self.disappeartaskfn = nil
 		end
 	end
-	-- local function eventfn()
-	-- 	if self.disappeartask then
-	-- 		self.taskfn = self.disappeartask.fn
-	-- 		self.taskremaining = GetTimeForTick(self.disappeartask.nexttick - GetTick())
-	-- 		if self.taskfn and self.taskremaining then
-	-- 			self.disappeartask:Cancel()
-	-- 			self.disappeartask = nil
-	-- 		end
-	-- 	end
-	-- end
 	local function eventfn()
 		self:PauseDisappearing()
 	end
 	local pPrepareDisappear = self.PrepareDisappear
 	self.PrepareDisappear = function(self)
-		-- if not self.twevent then
-		-- 	self.twevent = self.inst:ListenForEvent("time_stopped", eventfn)
-		-- end
-		-- if not self.twevent2 then
-		-- 	self.twevent2 = self.inst:ListenForEvent("time_resumed", function()
-		-- 		if not self.disappeartask and self.taskfn and self.taskremaining then
-		-- 			self.disappeartask = self.inst:DoTaskInTime(self.taskremaining > 0 and self.taskremaining + FRAMES * 3 or FRAMES * 3, self.taskfn, self)
-		-- 		end
-		-- 	end)
-		-- end
 		pPrepareDisappear(self)
 		if self.inst:HasTag("time_stopped") then
 			self.inst:DoTaskInTime(FRAMES, eventfn)
