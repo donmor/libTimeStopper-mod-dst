@@ -83,7 +83,13 @@ local function freeze(ent)
 		end
 		if ent.components.playercontroller then
 			ent.components.playercontroller:Enable(false)
-	end
+		end
+		if ent.components.burnable then
+			ent.components.burnable:PauseBurning()
+		end
+		if ent.components.disappears then
+			ent.components.disappears:PauseDisappearing()
+		end
 	end
 	if not ent:HasTag("time_stopped") then
 		ent:AddTag("time_stopped")
@@ -147,6 +153,12 @@ local function resume(ent)
 				end
 				ent:PushEvent("healthdelta", { oldpercent = ent.components.health:GetPercent(), newpercent = ent.components.health:GetPercent(), overtime = false, cause = "oldager_component", afflicter = nil, amount = 0 })
 			end
+		end
+		if ent.components.burnable then
+			ent.components.burnable:ResumeBurning()
+		end
+		if ent.components.disappears then
+			ent.components.disappears:ResumeDisappearing()
 		end
 	end
 	if ent:HasTag("time_stopped") then

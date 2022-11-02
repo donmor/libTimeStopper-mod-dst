@@ -36,28 +36,48 @@ AddComponentPostInit("projectile", function(self)
 end)	-- <改写投射物等以达到时停效果
 
 AddComponentPostInit("burnable", function(self)
-		local function eventfn()
-			if self.task then
-				self.taskfn = self.task.fn
-				self.taskremaining = GetTimeForTick(self.task.nexttick - GetTick())
-				if self.taskfn and self.taskremaining then
-					self.task:Cancel()
-					self.task = nil
-				end
+	self.PauseBurning = function(self)
+		if self.task and self.task.nexttick then
+			self.taskfn = self.task.fn
+			self.taskremaining = math.max(GetTimeForTick(self.task.nexttick - GetTick()), FRAMES * 3)
+			if self.taskfn and self.taskremaining then
+				self.task:Cancel()
+				self.task = nil
 			end
 		end
+	end
+	self.ResumeBurning = function(self)
+		if not self.task and self.taskfn and self.taskremaining then
+			self.task = self.inst:DoTaskInTime(self.taskremaining > 0 and self.taskremaining or FRAMES * 3, self.taskfn, self)
+			self.taskremaining = nil
+			self.taskfn = nil
+		end
+	end
+	-- local function eventfn()
+	-- 	if self.task and self.task.nexttick then
+	-- 		self.taskfn = self.task.fn
+	-- 		self.taskremaining = GetTimeForTick(self.task.nexttick - GetTick())
+	-- 		if self.taskfn and self.taskremaining then
+	-- 			self.task:Cancel()
+	-- 			self.task = nil
+	-- 		end
+	-- 	end
+	-- end
+	local function eventfn()
+		self:PauseBurning()
+	end
 	local pExtendBurning = self.ExtendBurning
 	self.ExtendBurning = function(self)
-		if not self.twevent then
-			self.twevent = self.inst:ListenForEvent("time_stopped", eventfn)
-		end
-		if not self.twevent2 then
-			self.twevent2 = self.inst:ListenForEvent("time_resumed", function()
-				if not self.task and self.taskfn and self.taskremaining then
-					self.task = self.inst:DoTaskInTime(self.taskremaining > 0 and self.taskremaining + FRAMES * 3 or FRAMES * 3, self.taskfn, self)
-				end
-			end)
-		end
+		-- if not self.twevent then
+		-- 	self.twevent = self.inst:ListenForEvent("time_stopped", eventfn)
+		-- end
+		-- if not self.twevent2 then
+		-- 	self.twevent2 = self.inst:ListenForEvent("time_resumed", function()
+		-- 		if not self.task and self.taskfn and self.taskremaining then
+		-- 			self.task = self.inst:DoTaskInTime(self.taskremaining > 0 and self.taskremaining + FRAMES * 3 or FRAMES * 3, self.taskfn, self)
+		-- 		end
+		-- 	end)
+		-- end
 		pExtendBurning(self)
 		if self.inst:HasTag("time_stopped") then
 			self.inst:DoTaskInTime(FRAMES, eventfn)
@@ -154,28 +174,48 @@ AddComponentPostInit("health", function(self)
 end)	-- <改写生命
 
 AddComponentPostInit("disappears", function(self)
-	local function eventfn()
-		if self.disappeartask then
-			self.taskfn = self.disappeartask.fn
-			self.taskremaining = GetTimeForTick(self.disappeartask.nexttick - GetTick())
-			if self.taskfn and self.taskremaining then
+	self.PauseDisappearing = function(self)
+		if self.disappeartask and self.disappeartask.nexttick then
+			self.disappeartaskfn = self.disappeartask.fn
+			self.disappeartaskremaining = math.max(GetTimeForTick(self.disappeartask.nexttick - GetTick()), FRAMES * 3)
+			if self.disappeartaskfn and self.disappeartaskremaining then
 				self.disappeartask:Cancel()
 				self.disappeartask = nil
 			end
 		end
 	end
+	self.ResumeDisappearing = function(self)
+		if not self.disappeartask and self.disappeartaskfn and self.disappeartaskremaining then
+			self.disappeartask = self.inst:DoTaskInTime(self.disappeartaskremaining > 0 and self.disappeartaskremaining or FRAMES * 3, self.disappeartaskfn, self)
+			self.disappeartaskremaining = nil
+			self.disappeartaskfn = nil
+		end
+	end
+	-- local function eventfn()
+	-- 	if self.disappeartask then
+	-- 		self.taskfn = self.disappeartask.fn
+	-- 		self.taskremaining = GetTimeForTick(self.disappeartask.nexttick - GetTick())
+	-- 		if self.taskfn and self.taskremaining then
+	-- 			self.disappeartask:Cancel()
+	-- 			self.disappeartask = nil
+	-- 		end
+	-- 	end
+	-- end
+	local function eventfn()
+		self:PauseDisappearing()
+	end
 	local pPrepareDisappear = self.PrepareDisappear
 	self.PrepareDisappear = function(self)
-		if not self.twevent then
-			self.twevent = self.inst:ListenForEvent("time_stopped", eventfn)
-		end
-		if not self.twevent2 then
-			self.twevent2 = self.inst:ListenForEvent("time_resumed", function()
-				if not self.disappeartask and self.taskfn and self.taskremaining then
-					self.disappeartask = self.inst:DoTaskInTime(self.taskremaining > 0 and self.taskremaining + FRAMES * 3 or FRAMES * 3, self.taskfn, self)
-				end
-			end)
-		end
+		-- if not self.twevent then
+		-- 	self.twevent = self.inst:ListenForEvent("time_stopped", eventfn)
+		-- end
+		-- if not self.twevent2 then
+		-- 	self.twevent2 = self.inst:ListenForEvent("time_resumed", function()
+		-- 		if not self.disappeartask and self.taskfn and self.taskremaining then
+		-- 			self.disappeartask = self.inst:DoTaskInTime(self.taskremaining > 0 and self.taskremaining + FRAMES * 3 or FRAMES * 3, self.taskfn, self)
+		-- 		end
+		-- 	end)
+		-- end
 		pPrepareDisappear(self)
 		if self.inst:HasTag("time_stopped") then
 			self.inst:DoTaskInTime(FRAMES, eventfn)
